@@ -216,8 +216,8 @@ func on_coin_dropped() -> void:
 	refresh()
 
 func on_spin_hit() -> void:
-	bonus.trigger()
-	hud.toast("命中移动靶！" + ("抽奖已排队" if bonus.pending_spins>0 else "三滚轮启动"))
+	var accepted:bool=bonus.trigger()
+	hud.toast(("命中移动靶！" + ("抽奖已排队" if bonus.pending_spins>0 else "三滚轮启动")) if accepted else "本轮连抽已达 2 次 · 继续推币收奖")
 	persist()
 	refresh()
 

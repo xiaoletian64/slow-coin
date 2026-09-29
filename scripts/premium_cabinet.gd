@@ -307,10 +307,11 @@ func sync_bonus(bonus,practice:bool)->void:
 		reels[i].rows=bonus.column(i)
 		reels[i].lit=bonus.lit_rows(i)
 		reels[i].set_reel(str(bonus.reels[i]),bonus.spinning,bonus.elapsed,i)
-	if bonus.spinning:status.text="抽奖中\n待落 %s 枚" % bonus.remaining
-	elif bonus.presentation>0:status.text="中了 %s！\n好戏开场" % bonus.reward
-	elif bonus.remaining>0:status.text="待落 %s 枚\n待抽 %s 次" % [bonus.remaining,bonus.pending_spins]
-	else:status.text="投币命中靶\n启动老虎机"
+	if bonus.spinning:status.text="连抽降档" if bonus.reduced_draw else "抽奖中"
+	elif bonus.presentation>0:status.text="中了 %s！" % bonus.reward
+	elif bonus.remaining>0:status.text="待落 %s 枚" % bonus.remaining
+	else:status.text="投币命中靶"
+	status.text+="\n待抽 %s 次" % bonus.pending_spins
 
 func bold_font()->FontVariation:
 	var font:=FontVariation.new()

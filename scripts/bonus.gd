@@ -5,6 +5,7 @@ extends RefCounted
 const SYMBOLS := ["cherry","bell","star","seven"]
 const LINES := [[0,1,2],[3,4,5],[6,7,8],[0,4,8],[6,4,2]]
 const SETTLEMENT_THRESHOLD := 200
+const CHAIN_LIMIT := 2
 const PRIZES := [58,388,2999,29999]
 const PATTERNS := ["逐枚吐币","连续吐币","摆动吐币","快速吐币"]
 var spinning := false
@@ -21,6 +22,7 @@ var emitted := 0
 var pending_spins := 0
 var pending_reduced:Array=[]
 var reduced_draw:=false
+var chain_used:=0
 var awarded:=0
 var settled:=0
 var last_settlement_pool:=0
@@ -44,8 +46,22 @@ static func tier_for_roll(roll:int,reduced:=false)->int:
 func winning_active()->bool:
 	return remaining>0 or presentation>0 or (spinning and reward>0)
 
+func trim_chain_queue()->void:
+	var modes:Array=[]
+	var available:int=CHAIN_LIMIT-chain_used
+	for i in range(pending_spins):
+		var reduced:bool=winning_active() or (i<pending_reduced.size() and bool(pending_reduced[i]))
+		if reduced:
+			if available<=0:continue
+			available-=1
+		modes.append(reduced)
+	pending_reduced=modes
+	pending_spins=modes.size()
+
 func trigger(roll := -1, reduced_override := -1) -> bool:
+	trim_chain_queue()
 	var reduced:bool=winning_active() if reduced_override<0 else reduced_override==1
+	if reduced and chain_used+pending_reduced.count(true)>=CHAIN_LIMIT:return false
 	if spinning or presentation>0:
 		while pending_reduced.size()<pending_spins:pending_reduced.append(winning_active())
 		pending_spins += 1
@@ -54,6 +70,7 @@ func trigger(roll := -1, reduced_override := -1) -> bool:
 	if roll<0:
 		roll=randi_range(0,9999)
 	reduced_draw=reduced
+	if reduced:chain_used+=1
 	tier=tier_for_roll(roll,reduced)
 	if tier>=0:
 		reels=[SYMBOLS[tier],SYMBOLS[tier],SYMBOLS[tier]]
@@ -67,6 +84,8 @@ func trigger(roll := -1, reduced_override := -1) -> bool:
 	elapsed=0
 	cooldown=0.0
 	credited=false
+	if tier>=0 and not reduced:chain_used=0
+	trim_chain_queue()
 	return true
 
 func tick(delta: float) -> bool:
@@ -74,6 +93,7 @@ func tick(delta: float) -> bool:
 	for payout in payouts:payout.wait=maxf(0,float(payout.wait)-delta)
 	presentation=maxf(0,presentation-delta)
 	var started:=false
+	trim_chain_queue()
 	if not spinning and presentation<=0 and pending_spins>0:
 		pending_spins-=1
 		var reduced:bool=bool(pending_reduced.pop_front()) if not pending_reduced.is_empty() else false
@@ -103,10 +123,12 @@ func ready_coin_count()->int:
 
 func settle_pending(percent:int)->int:
 	if percent<1 or percent>90 or remaining<=0:return 0
+	trim_chain_queue()
 	var extra:=reward if spinning else 0
 	for i in range(pending_spins):
 		var roll:=randi_range(0,9999)
 		var reduced:bool=winning_active() or (i<pending_reduced.size() and bool(pending_reduced[i]))
+		if reduced:chain_used+=1
 		var draw_tier:=tier_for_roll(roll,reduced)
 		if draw_tier>=0:extra+=PRIZES[draw_tier]
 	awarded+=extra
@@ -183,7 +205,7 @@ func pattern_name() -> String:
 	return PATTERNS[tier] if tier>=0 else "等待命中奖口"
 
 func to_dict() -> Dictionary:
-	return {"pending_reduced":pending_reduced.duplicate(),"reduced_draw":reduced_draw,"format":4,"awarded":awarded,"settled":settled,"payouts":payouts.duplicate(true),"spinning":spinning,"elapsed":elapsed,"cooldown":cooldown,"reward":reward,"remaining":remaining,"dispense_clock":dispense_clock,"presentation":presentation,"reels":reels.duplicate(),"tier":tier,"credited":credited,"emitted":emitted,"pending_spins":pending_spins,"grid":grid.duplicate(),"winning_line":winning_line}
+	return {"chain_used":chain_used,"pending_reduced":pending_reduced.duplicate(),"reduced_draw":reduced_draw,"format":4,"awarded":awarded,"settled":settled,"payouts":payouts.duplicate(true),"spinning":spinning,"elapsed":elapsed,"cooldown":cooldown,"reward":reward,"remaining":remaining,"dispense_clock":dispense_clock,"presentation":presentation,"reels":reels.duplicate(),"tier":tier,"credited":credited,"emitted":emitted,"pending_spins":pending_spins,"grid":grid.duplicate(),"winning_line":winning_line}
 
 func restore(data: Dictionary) -> bool:
 	if data.get("format")==4:return restore_parallel(data)
@@ -245,6 +267,7 @@ func restore(data: Dictionary) -> bool:
 	pending_spins=int(data.pending_spins)
 	pending_reduced=[]
 	reduced_draw=false
+	chain_used=0
 	if cells.is_empty():
 		build_grid(42)
 	else:
@@ -257,6 +280,8 @@ func restore(data: Dictionary) -> bool:
 	return true
 
 func restore_parallel(data:Dictionary)->bool:
+	var used=data.get("chain_used",1 if data.get("reduced_draw",false) and data.get("spinning",false) else 0)
+	if not (used is int or used is float) or not is_finite(float(used)) or used<0 or used>CHAIN_LIMIT or float(used)!=floor(float(used)):return false
 	var modes=data.get("pending_reduced",[])
 	if not modes is Array or modes.size()>1000000:return false
 	for mode in modes:
@@ -297,4 +322,6 @@ func restore_parallel(data:Dictionary)->bool:
 	remaining=int(data.remaining)
 	emitted=int(data.emitted)
 	payouts=rows.duplicate(true)
+	chain_used=int(used)
+	trim_chain_queue()
 	return true
