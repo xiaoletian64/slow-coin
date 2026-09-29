@@ -37,7 +37,7 @@ void fragment(){vec2 p=UV*2.0-1.0;float d=length(p);ALBEDO=vec3(0.70,0.85,0.98);
 		clouds.append(cloud)
 func input_accepted()->void:inputs=mini(inputs+1,12)
 func has_room()->bool:
-	return machine.coins.get_child_count()+COIN_COUNT<=machine.CAPACITY-12
+	return true # Overflow is handled by the machine; physical landing checks still apply.
 func find_site(keep_position:=false)->bool:
 	# Five coins per layer, ten layers, safely ahead of every pusher and inside side losses.
 	var candidates:Array=[Vector3(-1.2,0,1.65),Vector3(1.2,0,1.65),Vector3(0,0,1.65)]

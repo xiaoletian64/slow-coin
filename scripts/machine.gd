@@ -4,9 +4,10 @@ signal coin_exited(front: bool, at: Vector3, bonus: bool)
 signal spin_hit
 signal metal_hit(strength: float)
 signal coin_landed
+signal coins_cleared(count:int)
 signal coin_dropped
 const Coin = preload("res://scripts/coin.gd")
-const CAPACITY := 480
+const CAPACITY := 1000
 const QUEUE_LIMIT := 1000000
 var coins := Node3D.new()
 var pusher: AnimatableBody3D
@@ -337,7 +338,7 @@ func _physics_process(delta: float) -> void:
 	update_guided_coins(delta)
 	update_pinboard_coins(delta)
 	cooldown = maxf(0, cooldown - delta)
-	if coins.get_child_count()<CAPACITY and clearing<=0 and not pending.is_empty() and cooldown <= 0 and pinboard_count()<32 and guide_mouth_clear():
+	if clearing<=0 and not pending.is_empty() and cooldown <= 0 and pinboard_count()<32 and guide_mouth_clear():
 		var shot = pending.pop_front()
 		if shot is float or shot is int:
 			shot = {"x":shot,"y":1.18,"vx":0.0}
@@ -423,7 +424,22 @@ func spawn_coin(pos: Vector3):
 	coins.add_child(coin)
 	coin.position = pos
 	coin.set_silver(premium_enabled)
+	clear_overflow(coin)
 	return coin
+
+func clear_overflow(new_coin)->void:
+	if coins.get_child_count()<=CAPACITY:return
+	var candidates:Array=[]
+	for coin in coins.get_children():
+		if coin!=new_coin and not coin.in_pinboard:candidates.append(coin)
+	if candidates.size()<50:
+		for coin in coins.get_children():
+			if coin!=new_coin and coin not in candidates:candidates.append(coin)
+	candidates.shuffle()
+	for i in range(50):
+		coins.remove_child(candidates[i])
+		candidates[i].queue_free()
+	coins_cleared.emit(50)
 
 func settle_exits() -> void:
 	for coin in coins.get_children():

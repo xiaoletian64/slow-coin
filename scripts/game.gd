@@ -58,6 +58,7 @@ func _ready() -> void:
 	machine.coin_exited.connect(on_coin_exited)
 	machine.coin_dropped.connect(on_coin_dropped)
 	machine.spin_hit.connect(on_spin_hit)
+	machine.coins_cleared.connect(func(count):hud.toast("台面超过 1,000 枚 · 随机消除 %d 枚" % count))
 	machine.tower.prize_ready=func():return bonus.ready_coin_count()>=50
 	machine.tower.prize_appeared.connect(func(count):
 		for i in range(count):bonus.consume_coin())
@@ -311,7 +312,7 @@ func _physics_process(delta: float) -> void:
 		refresh()
 	if bonus.can_dispense() and bonus.dispense_clock<=0 and machine.clearing<=0:
 		var tower_waiting:bool=bonus.remaining>=500 and bonus.ready_coin_count()>=50 and machine.tower.request_prize_tower()
-		if not tower_waiting and machine.coins.get_child_count()<Machine.CAPACITY and machine.pinboard_count()<32:
+		if not tower_waiting and machine.pinboard_count()<32:
 			var coin=machine.dispense_bonus(bonus.payout_tier(),bonus.payout_emitted())
 			if coin!=null:
 				bonus.consume_coin()
