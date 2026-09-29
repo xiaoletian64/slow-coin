@@ -4,6 +4,7 @@ extends RefCounted
 # Prizes are physical coins owed to the tray, NEVER wallet credit.
 const SYMBOLS := ["cherry","bell","star","seven"]
 const LINES := [[0,1,2],[3,4,5],[6,7,8],[0,4,8],[6,4,2]]
+const SETTLEMENT_THRESHOLD := 200
 const PRIZES := [58,388,2999,29999]
 const PATTERNS := ["逐枚吐币","连续吐币","摆动吐币","快速吐币"]
 var spinning := false

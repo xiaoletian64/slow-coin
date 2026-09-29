@@ -458,11 +458,11 @@ func test_coin_tower()->void:
 	persist()
 
 func open_settlement()->void:
-	if practice or bonus.remaining<=29999:return
+	if practice or bonus.remaining<=bonus.SETTLEMENT_THRESHOLD:return
 	set_paused(true)
 	hud.show_settlement(bonus.remaining,bonus.pending_spins+(1 if bonus.spinning else 0))
 func settle_pending_prizes()->void:
-	if practice or not paused or bonus.remaining<=29999:return
+	if practice or not paused or bonus.remaining<=bonus.SETTLEMENT_THRESHOLD:return
 	var old_bonus:Dictionary=bonus.to_dict()
 	var old_tower:Dictionary=machine.tower.snapshot()
 	var old_wallet:Dictionary=wallet.to_dict()
