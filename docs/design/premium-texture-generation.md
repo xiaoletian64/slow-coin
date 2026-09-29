@@ -1,0 +1,7 @@
+# Premium circus texture generation
+
+Tool: built-in image_gen; generated September 29, 2026.
+Asset: assets/art/premium-circus-atlas.png. Texture only; actual cabinet geometry is in scripts/premium_cabinet.gd. In-game preview assets/art/premium-preview.png is captured by tests/capture_premium.gd.
+
+## Exact prompt
+A production-ready FLAT 2D texture atlas for an original premium Chinese arcade circus coin pusher. Square composition, full bleed, no perspective, no 3D mockup, no object shadows, no photographed machine. Deep royal blue painted enamel background. Layout exactly: leftmost 25% wide vertical strip and rightmost 25% wide vertical strip each contain beautiful vintage circus illustrations stacked vertically: friendly smiling clown with red nose and blue red top hat in middle, balloons near top, elegant golden firework rays and circus tent near bottom. Center 50% mostly clear dark royal blue with ornate red velvet swag curtains on its top edge, scattered fine gold stars on edges, clean dark blue central area for an actual in-game display to cover. Metallic gold decorative scroll borders dividing these three vertical areas. Sophisticated detailed hand-painted arcade printed art, fine etched accents, clean rich saturated colors, charming and authentic 1990s Asian amusement arcade feel. No text, no letters, no logos, no tokens, no screens, no watermarks. Decorative artwork only, flat orthographic print file.

@@ -1,0 +1,4 @@
+Import('env')
+env_speech = env.Clone()
+env_speech.Append(CCFLAGS=['-fobjc-arc'])
+env_speech.add_source_files(env.modules_sources, '*.mm')

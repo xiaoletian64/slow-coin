@@ -1,0 +1,38 @@
+config_version=5
+
+[application]
+config/name="慢慢推"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://assets/icon.svg"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="SlowCoin"
+
+[display]
+window/size/viewport_width=450
+window/size/viewport_height=900
+window/size/window_width_override=450
+window/size/window_height_override=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+window/energy_saving/keep_screen_on=false
+
+[rendering]
+textures/vram_compression/import_etc2_astc=true
+textures/vram_compression/import_s3tc_bptc=true
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=1
+environment/defaults/default_clear_color=Color(0.028, 0.058, 0.085, 1)
+
+[physics]
+3d/physics_engine="Jolt Physics"
+common/physics_ticks_per_second=60
+3d/default_gravity=9.8
+
+[input_devices]
+sensors/enable_accelerometer=true
+pointing/emulate_touch_from_mouse=false
+pointing/emulate_mouse_from_touch=true

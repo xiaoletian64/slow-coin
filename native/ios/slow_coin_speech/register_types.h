@@ -1,0 +1,3 @@
+#include "modules/register_module_types.h"
+void initialize_slow_coin_speech_module(ModuleInitializationLevel p_level);
+void uninitialize_slow_coin_speech_module(ModuleInitializationLevel p_level);

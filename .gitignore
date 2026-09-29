@@ -1,0 +1,15 @@
+.godot/
+.tools/
+builds/
+.DS_Store
+*.keystore
+*.mobileprovision
+
+/android/
+
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.key
