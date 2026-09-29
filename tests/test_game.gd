@@ -58,7 +58,8 @@ func run() -> void:
 		game.machine.pending.append(0.0)
 	money = game.wallet.balance
 	game.request_coin()
-	check(game.wallet.balance == money, "capacity includes queue, no debit")
+	check(game.wallet.balance == money-1 and game.machine.pending.size()==241, "long queue accepts input with one debit")
+	money=game.wallet.balance
 	game.machine.pending.clear()
 	var front = game.machine.spawn_coin(Vector3(0, -0.4, 3.3))
 	game.machine.settle_exits()

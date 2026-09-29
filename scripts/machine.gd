@@ -7,7 +7,7 @@ signal coin_landed
 signal coin_dropped
 const Coin = preload("res://scripts/coin.gd")
 const CAPACITY := 480
-const QUEUE_LIMIT := 24
+const QUEUE_LIMIT := 1000000
 var coins := Node3D.new()
 var pusher: AnimatableBody3D
 var second_pusher: AnimatableBody3D
@@ -337,7 +337,7 @@ func _physics_process(delta: float) -> void:
 	update_guided_coins(delta)
 	update_pinboard_coins(delta)
 	cooldown = maxf(0, cooldown - delta)
-	if clearing<=0 and not pending.is_empty() and cooldown <= 0 and pinboard_count()<32 and guide_mouth_clear():
+	if coins.get_child_count()<CAPACITY and clearing<=0 and not pending.is_empty() and cooldown <= 0 and pinboard_count()<32 and guide_mouth_clear():
 		var shot = pending.pop_front()
 		if shot is float or shot is int:
 			shot = {"x":shot,"y":1.18,"vx":0.0}
@@ -393,7 +393,7 @@ func update_pusher() -> void:
 		sweep_bar.rotation.y=sin(phase/4.8*TAU)*0.28
 
 func accepts_coin() -> bool:
-	return coins.get_child_count() + pending.size() < CAPACITY and pending.size() < QUEUE_LIMIT
+	return pending.size() < QUEUE_LIMIT
 
 func enqueue(x: float) -> bool:
 	if not accepts_coin():
@@ -471,7 +471,7 @@ static func valid_snapshot(data: Dictionary) -> bool:
 	if data.has("tower") and not preload("res://scripts/tower_event.gd").valid(data.tower):return false
 	if not data.get("coins") is Array or not data.get("queue") is Array:
 		return false
-	if data.coins.size() + data.queue.size() > CAPACITY or data.queue.size() > QUEUE_LIMIT:
+	if data.coins.size() > CAPACITY or data.queue.size() > QUEUE_LIMIT:
 		return false
 	for key in ["phase","cooldown"]:
 		var value = data.get(key)

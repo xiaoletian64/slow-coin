@@ -197,7 +197,7 @@ func request_coin() -> void:
 	if paused or save_failed:
 		return
 	if not machine.accepts_coin():
-		hud.toast("等前面的金币落下，再投一枚")
+		hud.toast("投币队列已达上限，请稍后再投")
 		return
 	var unlocked: int = wallet.unlocked_count()
 	if not wallet.spend(practice):
@@ -311,7 +311,7 @@ func _physics_process(delta: float) -> void:
 		refresh()
 	if bonus.can_dispense() and bonus.dispense_clock<=0 and machine.clearing<=0:
 		var tower_waiting:bool=bonus.remaining>=500 and bonus.ready_coin_count()>=50 and machine.tower.request_prize_tower()
-		if not tower_waiting and machine.coins.get_child_count()+machine.pending.size()<Machine.CAPACITY and machine.pinboard_count()<32:
+		if not tower_waiting and machine.coins.get_child_count()<Machine.CAPACITY and machine.pinboard_count()<32:
 			var coin=machine.dispense_bonus(bonus.payout_tier(),bonus.payout_emitted())
 			if coin!=null:
 				bonus.consume_coin()

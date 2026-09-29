@@ -325,7 +325,7 @@ func update_aim(locked: bool) -> void:
 	aim_button.text = "↔  继续摆动" if locked else "Ⅱ  停在这里"
 	aim_button.add_theme_stylebox_override("normal",panel_style("42625f" if locked else "281d3c",10,"8ac4b2" if locked else "594069"))
 
-func update_state(wallet, practice: bool, queued: int, capacity: int, mechanism := "classic") -> void:
+func update_state(wallet, practice: bool, queued: int, _capacity: int, mechanism := "classic") -> void:
 	player_title.text="称号 · "+wallet.title_name()
 	balance_label.text = format_number(wallet.balance)
 	stage_label.text = ("练习 · " if practice else "") + {"classic":"经典双层","split":"交错双推板","sweep":"扫杆联动"}[mechanism]+" ▾"
@@ -335,11 +335,9 @@ func update_state(wallet, practice: bool, queued: int, capacity: int, mechanism 
 	progress_bar.value = 0 if practice else wallet.side_progress
 	collection_label.text = "无内购  ·  自动保存  ·  随时歇一会儿"
 	count_label.text = "逐枚出币中 · 等待 %d 枚" % queued if queued>0 else "摆杆自动游走，也可以停在喜欢的位置"
-	drop_button.disabled = (not practice and wallet.balance<1) or capacity>=240 or queued>=24
+	drop_button.disabled = (not practice and wallet.balance<1)
 	if not practice and wallet.balance<1:
 		count_label.text = "金币用完啦，去免费练习台继续玩"
-	elif capacity>=240:
-		count_label.text = "台面有点满，等金币落下再投"
 
 static func format_number(value: int) -> String:
 	var raw := str(value)
