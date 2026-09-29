@@ -11,7 +11,7 @@ func run()->void:
 	game.machine.clear_coins()
 	var B=load("res://scripts/bonus.gd")
 	game.bonus=B.new()
-	for roll in [6000,9000,6000,6000]:
+	for roll in [8000,9800,8000,8000]:
 		game.bonus.trigger(roll);game.bonus.tick(3);game.bonus.tick(3.4)
 	for i in range(40):game.bonus.consume_coin()
 	check(game.bonus.remaining==522,"multiple wins accumulate independently")
@@ -23,7 +23,7 @@ func run()->void:
 	saved=game.machine.snapshot()
 	game.machine.restore(saved);game.machine.tower.tick(2)
 	check(game.machine.coins.get_child_count()==50 and game.bonus.remaining==472,"revealed tower never grants twice")
-	game.bonus.trigger(9980);game.bonus.tick(3);game.bonus.tick(3.4)
+	game.bonus.trigger(9998);game.bonus.tick(3);game.bonus.tick(3.4)
 	game.bonus.trigger(0)
 	game.bonus.pending_spins=3
 	var owed:int=game.bonus.remaining

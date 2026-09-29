@@ -8,7 +8,7 @@ func run()->void:
 	game.test_mode=true
 	root.add_child(game)
 	game.set_paused(false)
-	for pair in [[6000,58],[9000,388],[9800,2999],[9980,29999]]:
+	for pair in [[8000,58],[9800,388],[9980,2999],[9998,29999]]:
 		game.machine.clear_coins()
 		game.bonus=load("res://scripts/bonus.gd").new()
 		var balance:int=game.wallet.balance

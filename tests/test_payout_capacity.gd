@@ -22,7 +22,7 @@ func run()->void:
 	if not chained:failures+=1;push_error("228-coin saved tray must emit all 17 remaining coins while queued draws run")
 	game.machine.restore(data.boards.classic)
 	game.bonus=load("res://scripts/bonus.gd").new()
-	game.bonus.trigger(9000)
+	game.bonus.trigger(9800)
 	var large_finished:=false
 	for i in range(12000):
 		await physics_frame

@@ -26,7 +26,7 @@ func run()->void:
 		coin.angular_velocity=Vector3(0.3,0.2,0.1)
 		var shape=coin.get_child(0).shape
 		var mass:float=coin.mass
-		game.bonus.trigger(9000)
+		game.bonus.trigger(9800)
 		game.bonus.tick(3)
 		var debt:int=game.bonus.remaining
 		var pending:int=game.bonus.pending_spins

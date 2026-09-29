@@ -27,18 +27,21 @@ var completed_timer:=0.0
 var grid: Array = ["cherry","bell","star","bell","star","seven","seven","cherry","bell"]
 var winning_line := -1
 
+# Shared by normal draws and instant settlement: 80% miss, 20% win.
+static func tier_for_roll(roll:int)->int:
+	if roll>=9998:return 3
+	if roll>=9980:return 2
+	if roll>=9800:return 1
+	if roll>=8000:return 0
+	return -1
+
 func trigger(roll := -1) -> bool:
 	if spinning or presentation>0:
 		pending_spins += 1
 		return true
 	if roll<0:
 		roll=randi_range(0,9999)
-	# 60% miss, 30% cherry, 8% bell, 1.8% star, 0.2% seven.
-	tier=-1
-	if roll>=9980:tier=3
-	elif roll>=9800:tier=2
-	elif roll>=9000:tier=1
-	elif roll>=6000:tier=0
+	tier=tier_for_roll(roll)
 	if tier>=0:
 		reels=[SYMBOLS[tier],SYMBOLS[tier],SYMBOLS[tier]]
 		reward=PRIZES[tier]
@@ -89,7 +92,8 @@ func settle_pending(percent:int)->int:
 	var extra:=reward if spinning else 0
 	for i in range(pending_spins):
 		var roll:=randi_range(0,9999)
-		extra+=29999 if roll>=9980 else (2999 if roll>=9800 else (388 if roll>=9000 else (58 if roll>=6000 else 0)))
+		var draw_tier:=tier_for_roll(roll)
+		if draw_tier>=0:extra+=PRIZES[draw_tier]
 	awarded+=extra
 	last_settlement_pool=remaining+extra
 	var value:=int(floor(float(last_settlement_pool)*percent/100.0))

@@ -29,7 +29,7 @@ func run()->void:
 	game.machine.shake_upper_coins()
 	check(lower.sleeping and lower.linear_velocity==Vector3.ZERO,"shake never impulses lower tray coins")
 	game.bonus=load("res://scripts/bonus.gd").new()
-	game.bonus.trigger(9000)
+	game.bonus.trigger(9800)
 	game.bonus.tick(3.0)
 	game.clear_machine()
 	var debt:int=game.bonus.remaining

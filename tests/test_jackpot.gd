@@ -4,7 +4,7 @@ func check(ok:bool,label:String)->void:
 	if not ok:failures+=1;push_error(label)
 func _initialize()->void:
 	var B=load("res://scripts/bonus.gd")
-	for pair in [[0,0],[6000,58],[9000,388],[9800,2999],[9980,29999]]:
+	for pair in [[0,0],[8000,58],[9800,388],[9980,2999],[9998,29999]]:
 		var b=B.new()
 		check(b.trigger(pair[0]),"trigger")
 		var state:Dictionary=b.to_dict()

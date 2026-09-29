@@ -22,7 +22,7 @@ func run()->void:
 	game.set_paused(false)
 	game.request_coin();game.request_coin()
 	var bank:int=game.wallet.balance
-	game.bonus.trigger(9000);game.bonus.tick(3)
+	game.bonus.trigger(9800);game.bonus.tick(3)
 	game.bonus.pending_spins=2
 	game.set_paused(true);game.restart_round()
 	check(game.wallet.balance==bank+2 and game.machine.pending.is_empty(),"restart refunds paid unspawned inputs")
