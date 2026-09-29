@@ -39,6 +39,7 @@ var dispenser_flaps: Array = []
 var dispenser_clocks: Array = []
 var premium
 var tower
+var rainbow
 var premium_enabled:=false
 var lighting_environment:Environment
 var original_shell:Array=[]
@@ -62,6 +63,9 @@ func _ready() -> void:
 	tower=preload("res://scripts/tower_event.gd").new()
 	add_child(tower)
 	tower.build(self)
+	rainbow=preload("res://scripts/rainbow_ball.gd").new()
+	add_child(rainbow)
+	rainbow.build(self)
 
 func material(color: String, metallic := 0.0, emission := false) -> StandardMaterial3D:
 	var key := color + str(metallic) + str(emission)
@@ -348,6 +352,7 @@ func _physics_process(delta: float) -> void:
 		coin_dropped.emit()
 	settle_exits()
 	tower.tick(delta)
+	rainbow.tick(delta)
 
 
 func update_pinboard_coins(delta := 1.0/60.0) -> void:
@@ -481,9 +486,10 @@ func snapshot() -> Dictionary:
 	var rows: Array = []
 	for coin in coins.get_children():
 		rows.append(coin.snapshot())
-	return {"tower":tower.snapshot(),"phase":phase,"clearing":clearing,"clear_clock":clear_clock,"cooldown":cooldown,"aim_phase":aim_phase,"aim_locked":aim_locked,"coins":rows,"queue":pending.duplicate()}
+	return {"rainbow":rainbow.snapshot(),"tower":tower.snapshot(),"phase":phase,"clearing":clearing,"clear_clock":clear_clock,"cooldown":cooldown,"aim_phase":aim_phase,"aim_locked":aim_locked,"coins":rows,"queue":pending.duplicate()}
 
 static func valid_snapshot(data: Dictionary) -> bool:
+	if data.has("rainbow") and not preload("res://scripts/rainbow_ball.gd").valid(data.rainbow):return false
 	if data.has("tower") and not preload("res://scripts/tower_event.gd").valid(data.tower):return false
 	if not data.get("coins") is Array or not data.get("queue") is Array:
 		return false
@@ -544,6 +550,7 @@ func restore(data: Dictionary) -> void:
 	pending.clear()
 	if not valid_snapshot(data):
 		tower.restore({})
+		rainbow.restore({})
 		clearing=0.0
 		clear_clock=0.0
 		update_shake_pegs(1.0)
@@ -556,6 +563,7 @@ func restore(data: Dictionary) -> void:
 		seed_coins()
 		return
 	tower.restore(data.get("tower",{}))
+	rainbow.restore(data.get("rainbow",{}))
 	clearing=clampf(float(data.get("clearing",0.0)),0,6)
 	clear_clock=clampf(float(data.get("clear_clock",0.0)),0,0.85)
 	update_shake_pegs(1.0)

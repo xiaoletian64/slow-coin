@@ -59,6 +59,10 @@ func _ready() -> void:
 	machine.coin_dropped.connect(on_coin_dropped)
 	machine.spin_hit.connect(on_spin_hit)
 	machine.coins_cleared.connect(func(count):hud.toast("台面超过 1,000 枚 · 随机消除 %d 枚" % count))
+	machine.rainbow.started.connect(func():hud.toast("幸运彩球！准备砸向推盘"))
+	machine.rainbow.impacted.connect(func():
+		hud.toast("彩球砸台！前口掉落才到账")
+		persist.call_deferred())
 	machine.tower.prize_ready=func():return bonus.ready_coin_count()>=50
 	machine.tower.prize_appeared.connect(func(count):
 		for i in range(count):bonus.consume_coin())
@@ -206,6 +210,7 @@ func request_coin() -> void:
 		return
 	machine.enqueue(machine.lane)
 	machine.tower.input_accepted()
+	machine.rainbow.input_accepted()
 	feedback.pulse()
 	if wallet.unlocked_count()>unlocked:
 		hud.toast("收藏解锁 · " + Wallet.COLLECTION_NAMES[unlocked])
