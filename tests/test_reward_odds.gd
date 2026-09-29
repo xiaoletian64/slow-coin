@@ -15,7 +15,7 @@ func _initialize()->void:
 	# Existing committed results must survive the odds change unmodified.
 	for roll in [8000,9800,9980,9998]:
 		var previous=Bonus.new()
-		previous.trigger(roll)
+		previous.trigger(roll,0)
 		var saved:Dictionary=previous.to_dict()
 		var restored=Bonus.new()
 		if not restored.restore(saved) or restored.reward!=previous.reward:

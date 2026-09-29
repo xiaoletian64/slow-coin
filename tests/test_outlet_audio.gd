@@ -21,7 +21,7 @@ func run()->void:
 	var first=game.machine.dispense_bonus(1,0)
 	check(first!=null and first.position.x==0,"prize comes from central mouth")
 	check(game.machine.dispense_bonus(3,1)==null,"occupied mouth cannot spawn overlapping coins")
-	game.bonus.trigger(9800)
+	game.bonus.trigger(9800,0)
 	game._physics_process(3.0)
 	check(game.bonus.remaining==388,"blocked outlet preserves full prize debt")
 	check(heard.is_empty(),"win and blocked dispenser make no ticks")

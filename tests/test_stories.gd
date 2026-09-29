@@ -12,7 +12,7 @@ func run()->void:
 		game.machine.clear_coins()
 		game.bonus=load("res://scripts/bonus.gd").new()
 		var balance:int=game.wallet.balance
-		game.bonus.trigger(pair[0])
+		game.bonus.trigger(pair[0],0)
 		game._physics_process(3.0)
 		check(game.bonus.remaining==pair[1] and game.bonus.emitted==0,"story starts before physical payout")
 		check(game.jackpot_fx.visible and game.jackpot_fx.amount==pair[1],"right story displayed")

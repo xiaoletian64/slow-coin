@@ -12,7 +12,7 @@ func run()->void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://builds/pause-sheet.png")
 	game.set_paused(false)
-	game.bonus.trigger(9800)
+	game.bonus.trigger(9800,0)
 	game._physics_process(3.0)
 	await create_timer(0.6).timeout
 	await RenderingServer.frame_post_draw

@@ -10,7 +10,7 @@ func run()->void:
 	var B=load("res://scripts/bonus.gd")
 	for pair in [[0,0],[8000,58],[9800,388],[9980,2999],[9998,29999]]:
 		var b=B.new()
-		b.trigger(pair[0])
+		b.trigger(pair[0],0)
 		var restored=B.new()
 		check(restored.restore(b.to_dict()),"pending spin restores")
 		restored.tick(3.0)
@@ -27,7 +27,7 @@ func run()->void:
 	game.set_paused(false)
 	game.machine.clear_coins()
 	var bank:int=game.wallet.balance
-	game.bonus.trigger(9800)
+	game.bonus.trigger(9800,0)
 	game._physics_process(3.0)
 	check(game.wallet.balance==bank,"388 prize does not directly credit wallet")
 	check(game.bonus.remaining+game.bonus.emitted==388,"dispensing conserves all 388 coins")

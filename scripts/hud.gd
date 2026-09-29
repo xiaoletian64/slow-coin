@@ -440,7 +440,7 @@ func show_help() -> void:
 	scroll.custom_minimum_size=Vector2(0,minf(410,size.y-320))
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	content.add_child(scroll)
-	var body := label(scroll,"① 双导杆自动左右摆动，币沿两杆之间下滑。\n    点「停在这里」固定，随时恢复摆动。\n② 按一下按钮，投入一枚金币。\n③ 推板自动来回，把金币推向前沿。\n\n正面掉落：每枚返还 1 金币。\n侧边掉落：不计奖励。\n每天首次进入自动补给 5,000 金币。\n正式投币每满 50 次解锁一枚纪念章。\n金币还可以永久兑换机台皮肤。\n经典小丑·典藏：12,000 金币，可免费预览。\n持续投币时偶尔出现旋风金币塔：每层 5 枚、共 10 层。\n盘满会延后，塔币也要推出前口才到账。\n\n投币穿过移动靶启动免费老虎机：\n三横线、两斜线：同图案连成线中奖。\n三樱桃 58（18%）· 三铃铛 388（1.8%）\n三星星 2,999（0.18%）· 三个7 29,999（0.02%）\n其余 80% 不中奖（本游戏暂定概率）。\n普通奖币从联动短导杆出币口快速落下。\n奖金按枚实际落到推盘，前口推出才到账。\n出币和抽奖同时进行，奖币过靶也可连奖。\n累计待出较多时分批生成 50 枚金币塔。\n累计待出超过 200 枚，可自选轮盘结算：\n剩余抽奖按原概率算出，再将总待出按 1%～90% 折算到账。\n会结清待出和抽奖机会，钱包及台面币保留。\n\n没有内购、广告或连续签到。\n练习台无限投币，不计正式收益。",13)
+	var body := label(scroll,"① 双导杆自动左右摆动，币沿两杆之间下滑。\n    点「停在这里」固定，随时恢复摆动。\n② 按一下按钮，投入一枚金币。\n③ 推板自动来回，把金币推向前沿。\n\n正面掉落：每枚返还 1 金币。\n侧边掉落：不计奖励。\n每天首次进入自动补给 5,000 金币。\n正式投币每满 50 次解锁一枚纪念章。\n金币还可以永久兑换机台皮肤。\n经典小丑·典藏：12,000 金币，可免费预览。\n持续投币时偶尔出现旋风金币塔：每层 5 枚、共 10 层。\n盘满会延后，塔币也要推出前口才到账。\n\n投币穿过移动靶启动免费老虎机：\n三横线、两斜线：同图案连成线中奖。\n三樱桃 58（18%）· 三铃铛 388（1.8%）\n三星星 2,999（0.18%）· 三个7 29,999（0.02%）\n其余 80% 不中奖（本游戏暂定概率）。\n正在中奖或派奖时，连抽降为 5%：\n58 枚 4.8%，388 枚 0.2%，不出更大档。\n期间积攒的连抽保留降档规则，轮盘结算同样适用。\n普通奖币从联动短导杆出币口快速落下。\n奖金按枚实际落到推盘，前口推出才到账。\n出币和抽奖同时进行，奖币过靶也可连奖。\n累计待出较多时分批生成 50 枚金币塔。\n累计待出超过 200 枚，可自选轮盘结算：\n剩余抽奖按原概率算出，再将总待出按 1%～90% 折算到账。\n会结清待出和抽奖机会，钱包及台面币保留。\n\n没有内购、广告或连续签到。\n练习台无限投币，不计正式收益。",13)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.custom_minimum_size.x = minf(size.x-86,384)
 	var done := button(content,"知道啦，去推金币",func():resume_requested.emit(),true)
@@ -482,7 +482,7 @@ func update_slot(bonus, practice: bool, collected:=0) -> void:
 		slot_labels[i].lit=bonus.lit_rows(i)
 		slot_labels[i].set_reel(str(bonus.reels[i]),bonus.spinning,bonus.elapsed,i)
 	if bonus.spinning:
-		slot_status.text="抽奖中 · 出币继续\n待落 %s 枚" % format_number(bonus.remaining)
+		slot_status.text=("连抽降档 · 58 / 388\n待落 %s 枚" if bonus.reduced_draw else "抽奖中 · 出币继续\n待落 %s 枚") % format_number(bonus.remaining)
 	elif bonus.presentation>0:
 		slot_status.text="小猫抓毛球" if bonus.reward==58 else ("小狗吃火腿" if bonus.reward==388 else "大奖演出中")
 	elif bonus.remaining>0:

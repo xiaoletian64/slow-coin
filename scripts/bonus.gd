@@ -19,6 +19,8 @@ var tier := -1
 var credited := true
 var emitted := 0
 var pending_spins := 0
+var pending_reduced:Array=[]
+var reduced_draw:=false
 var awarded:=0
 var settled:=0
 var last_settlement_pool:=0
@@ -29,20 +31,30 @@ var grid: Array = ["cherry","bell","star","bell","star","seven","seven","cherry"
 var winning_line := -1
 
 # Shared by normal draws and instant settlement: 80% miss, 20% win.
-static func tier_for_roll(roll:int)->int:
+static func tier_for_roll(roll:int,reduced:=false)->int:
+	if reduced:
+		if roll>=9980:return 1
+		return 0 if roll>=9500 else -1
 	if roll>=9998:return 3
 	if roll>=9980:return 2
 	if roll>=9800:return 1
 	if roll>=8000:return 0
 	return -1
 
-func trigger(roll := -1) -> bool:
+func winning_active()->bool:
+	return remaining>0 or presentation>0 or (spinning and reward>0)
+
+func trigger(roll := -1, reduced_override := -1) -> bool:
+	var reduced:bool=winning_active() if reduced_override<0 else reduced_override==1
 	if spinning or presentation>0:
+		while pending_reduced.size()<pending_spins:pending_reduced.append(winning_active())
 		pending_spins += 1
+		pending_reduced.append(reduced)
 		return true
 	if roll<0:
 		roll=randi_range(0,9999)
-	tier=tier_for_roll(roll)
+	reduced_draw=reduced
+	tier=tier_for_roll(roll,reduced)
 	if tier>=0:
 		reels=[SYMBOLS[tier],SYMBOLS[tier],SYMBOLS[tier]]
 		reward=PRIZES[tier]
@@ -64,7 +76,8 @@ func tick(delta: float) -> bool:
 	var started:=false
 	if not spinning and presentation<=0 and pending_spins>0:
 		pending_spins-=1
-		trigger()
+		var reduced:bool=bool(pending_reduced.pop_front()) if not pending_reduced.is_empty() else false
+		trigger(-1,1 if reduced or winning_active() else 0)
 		started=true
 	cooldown=maxf(0,cooldown-delta)
 	dispense_clock=maxf(0,dispense_clock-delta)
@@ -93,7 +106,8 @@ func settle_pending(percent:int)->int:
 	var extra:=reward if spinning else 0
 	for i in range(pending_spins):
 		var roll:=randi_range(0,9999)
-		var draw_tier:=tier_for_roll(roll)
+		var reduced:bool=winning_active() or (i<pending_reduced.size() and bool(pending_reduced[i]))
+		var draw_tier:=tier_for_roll(roll,reduced)
 		if draw_tier>=0:extra+=PRIZES[draw_tier]
 	awarded+=extra
 	last_settlement_pool=remaining+extra
@@ -102,6 +116,7 @@ func settle_pending(percent:int)->int:
 	remaining=0
 	payouts.clear()
 	pending_spins=0
+	pending_reduced.clear()
 	spinning=false
 	elapsed=3.0
 	presentation=0
@@ -168,7 +183,7 @@ func pattern_name() -> String:
 	return PATTERNS[tier] if tier>=0 else "等待命中奖口"
 
 func to_dict() -> Dictionary:
-	return {"format":4,"awarded":awarded,"settled":settled,"payouts":payouts.duplicate(true),"spinning":spinning,"elapsed":elapsed,"cooldown":cooldown,"reward":reward,"remaining":remaining,"dispense_clock":dispense_clock,"presentation":presentation,"reels":reels.duplicate(),"tier":tier,"credited":credited,"emitted":emitted,"pending_spins":pending_spins,"grid":grid.duplicate(),"winning_line":winning_line}
+	return {"pending_reduced":pending_reduced.duplicate(),"reduced_draw":reduced_draw,"format":4,"awarded":awarded,"settled":settled,"payouts":payouts.duplicate(true),"spinning":spinning,"elapsed":elapsed,"cooldown":cooldown,"reward":reward,"remaining":remaining,"dispense_clock":dispense_clock,"presentation":presentation,"reels":reels.duplicate(),"tier":tier,"credited":credited,"emitted":emitted,"pending_spins":pending_spins,"grid":grid.duplicate(),"winning_line":winning_line}
 
 func restore(data: Dictionary) -> bool:
 	if data.get("format")==4:return restore_parallel(data)
@@ -228,6 +243,8 @@ func restore(data: Dictionary) -> bool:
 	credited=data.credited
 	emitted=int(data.emitted)
 	pending_spins=int(data.pending_spins)
+	pending_reduced=[]
+	reduced_draw=false
 	if cells.is_empty():
 		build_grid(42)
 	else:
@@ -240,6 +257,11 @@ func restore(data: Dictionary) -> bool:
 	return true
 
 func restore_parallel(data:Dictionary)->bool:
+	var modes=data.get("pending_reduced",[])
+	if not modes is Array or modes.size()>1000000:return false
+	for mode in modes:
+		if not mode is bool:return false
+	if not data.get("reduced_draw",false) is bool:return false
 	var rows=data.get("payouts")
 	if not rows is Array or rows.size()>1000000:return false
 	for key in ["awarded","remaining","emitted"]:
@@ -267,6 +289,9 @@ func restore_parallel(data:Dictionary)->bool:
 	legacy.remaining=0 if legacy.get("spinning",false) else legacy.get("reward",-1)
 	legacy.emitted=0
 	if not restore(legacy):return false
+	if modes.size()>pending_spins:return false
+	pending_reduced=modes.duplicate()
+	reduced_draw=data.get("reduced_draw",false)
 	settled=int(redeemed)
 	awarded=int(data.awarded)
 	remaining=int(data.remaining)

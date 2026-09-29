@@ -14,7 +14,7 @@ func run()->void:
 	m.pending.clear()
 	for row in range(4):
 		for col in range(8):m.spawn_pinboard_coin(Vector3(-1.645+col*0.47,3.5+row*0.47,m.BOARD_Z),Vector3.ZERO)
-	game.bonus.trigger(8000)
+	game.bonus.trigger(8000,0)
 	game.clear_machine()
 	for i in range(190):await physics_frame
 	check(not game.bonus.spinning and game.bonus.reward==58,"shake cannot freeze current spin or lose committed reward")

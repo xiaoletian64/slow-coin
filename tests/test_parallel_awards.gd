@@ -5,10 +5,10 @@ func check(ok:bool,message:String)->void:
 func _initialize()->void:
 	var B=load("res://scripts/bonus.gd")
 	var b=B.new()
-	b.trigger(8000);b.tick(3);b.tick(3.4)
+	b.trigger(8000,0);b.tick(3);b.tick(3.4)
 	for i in range(12):b.consume_coin()
 	check(b.remaining==46,"first 58 prize has paid twelve")
-	b.trigger(9800)
+	b.trigger(9800,0)
 	check(b.spinning and b.remaining==46,"new draw runs while prior prize remains")
 	b.tick(1)
 	b.consume_coin()

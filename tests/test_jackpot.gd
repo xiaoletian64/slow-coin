@@ -6,7 +6,7 @@ func _initialize()->void:
 	var B=load("res://scripts/bonus.gd")
 	for pair in [[0,0],[8000,58],[9800,388],[9980,2999],[9998,29999]]:
 		var b=B.new()
-		check(b.trigger(pair[0]),"trigger")
+		check(b.trigger(pair[0],0),"trigger")
 		var state:Dictionary=b.to_dict()
 		var restored=B.new()
 		check(restored.restore(state),"valid persisted outcome")
