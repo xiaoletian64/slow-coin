@@ -1,8 +1,8 @@
 extends Node
 signal changed
 signal update_available
-const VERSION_CODE: = 18
-const VERSION_NAME: = "0.7.1"
+const VERSION_CODE: = 19
+const VERSION_NAME: = "0.7.2"
 const PACKAGE: = "com.slowcoin.pusher"
 const BASE_URL: = "http://124.222.88.195/slow-coin/"
 const MANIFEST_URL: = BASE_URL + "latest.json"

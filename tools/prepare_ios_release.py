@@ -15,6 +15,9 @@ for path in export.rglob('*Info.plist'):
         continue
     with path.open('rb') as source:
         data = plistlib.load(source)
+    for unused in ['NSCameraUsageDescription', 'NSPhotoLibraryUsageDescription']:
+        if not data.get(unused):
+            data.pop(unused, None)
     data['CFBundleDisplayName'] = '拾光币社'
     data['NSSpeechRecognitionUsageDescription'] = '仅在你点击麦克风后识别补给口令，也可直接输入文字。'
     data['NSMicrophoneUsageDescription'] = '用于你主动发起的语音补给口令识别，不保存录音。'
@@ -27,7 +30,8 @@ text = project.read_text()
 needle = 'OTHER_LDFLAGS = "'
 if needle not in text:
     raise RuntimeError('Exported linker configuration not found')
-text = text.replace(needle, needle + '-framework Speech -framework PhotosUI ')
+if '-framework Speech -framework PhotosUI ' not in text:
+    text = text.replace(needle, needle + '-framework Speech -framework PhotosUI ')
 project.write_text(text)
 privacy = list(export.rglob('PrivacyInfo.xcprivacy'))
 if not privacy:
