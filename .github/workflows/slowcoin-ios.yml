@@ -1,0 +1,98 @@
+name: slowcoin-ios
+run-name: ${{ inputs.release_id || 'SlowCoin iOS' }}
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      platform:
+        type: choice
+        options: [ios]
+        default: ios
+      release_id:
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      RELEASE_VERSION: ${{ inputs.build_name }}
+      RELEASE_BUILD: ${{ inputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26 or later
+        run: |
+          xcode=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -1)
+          test -n "$xcode"
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+      - name: Install official matching Godot
+        run: |
+          mkdir -p .tools
+          curl -fL --retry 3 -o .tools/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_macos.universal.zip
+          unzip -q .tools/godot.zip -d .tools
+          chmod +x .tools/Godot.app/Contents/MacOS/Godot
+          .tools/Godot.app/Contents/MacOS/Godot --version
+      - name: Verify source and regressions
+        run: |
+          .tools/Godot.app/Contents/MacOS/Godot --headless --path . --editor --import > import.log 2>&1
+          ! grep -E 'SCRIPT ERROR|Parse Error' import.log
+          .tools/Godot.app/Contents/MacOS/Godot --headless --path . --script tests/test_ios_release.gd
+          .tools/Godot.app/Contents/MacOS/Godot --headless --path . --script tests/test_restore.gd
+      - uses: actions/cache@v4
+        id: engine-cache
+        with:
+          path: .tools/ios-engine
+          key: slowcoin-ios-engine-4.6.3-xcode26-${{ hashFiles('native/ios/**') }}
+      - name: Build release engine with native speech and image picker
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        run: |
+          python3 -m venv .tools/scons-env
+          .tools/scons-env/bin/pip install scons
+          curl -fL --retry 3 -o .tools/godot-source.tar.gz https://github.com/godotengine/godot/archive/refs/tags/4.6.3-stable.tar.gz
+          mkdir -p .tools/godot-source .tools/ios-engine
+          tar xzf .tools/godot-source.tar.gz -C .tools/godot-source --strip-components=1
+          cp -R native/ios/slow_coin_speech .tools/godot-source/modules/
+          python3 tools/prepare_godot_source.py .tools/godot-source
+          cd .tools/godot-source
+          ../scons-env/bin/scons platform=ios target=template_release arch=arm64 simulator=no vulkan=no metal=no opengl3=yes optimize=size debug_symbols=no -j3
+          cp bin/libgodot.ios.template_release.arm64.a ../ios-engine/libgodot.a
+      - name: Fetch and export iOS project
+        run: |
+          python3 tools/fetch_ios_template.py
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/4.6.3.stable"
+          cp builds/templates/ios.zip "$HOME/Library/Application Support/Godot/export_templates/4.6.3.stable/ios.zip"
+          mkdir -p builds/ios
+          .tools/Godot.app/Contents/MacOS/Godot --headless --path . --export-release iOS builds/ios/SlowCoin.zip
+          python3 tools/prepare_ios_release.py
+      - name: Build unsigned device IPA
+        run: |
+          xcodebuild -project builds/ios/SlowCoin.xcodeproj -scheme SlowCoin -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath builds/device CODE_SIGN_IDENTITY='' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO IPHONEOS_DEPLOYMENT_TARGET=15.0 -quiet
+          app=$(find builds/device/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          test -n "$app"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $RELEASE_VERSION" "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $RELEASE_BUILD" "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 拾光币社' "$app/Info.plist"
+          mkdir Payload
+          cp -R "$app" Payload/
+          zip -qry slowcoin-ios-unsigned.zip Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slowcoin-ios-unsigned-${{ inputs.build_name }}-${{ inputs.build_number }}
+          path: slowcoin-ios-unsigned.zip
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: slowcoin-build-diagnostics
+          path: |
+            import.log
+            builds/ios/SlowCoin.xcodeproj/project.pbxproj

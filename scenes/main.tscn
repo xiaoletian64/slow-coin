@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/game.gd" id="1"]
+[ext_resource type="Script" uid="uid://c03rmqvtuj6jb" path="res://scripts/game.gd" id="1"]
 
-[node name="SlowCoin" type="Control"]
+[node name="SlowCoin" type="Control" unique_id=1205880788]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

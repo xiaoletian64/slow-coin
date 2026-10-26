@@ -7,6 +7,13 @@ const Hud = preload("res://scripts/hud.gd")
 const Speech = preload("res://scripts/speech.gd")
 const Bonus = preload("res://scripts/bonus.gd")
 const Feedback = preload("res://scripts/feedback.gd")
+const Thief = preload("res://scripts/thief_event.gd")
+const Challenges = preload("res://scripts/daily_challenges.gd")
+var thief = Thief.new()
+var challenges = Challenges.new()
+var thief_view
+var updater
+var update_panel_open: = false
 var wallet = Wallet.new()
 var bonus = Bonus.new()
 var inactive_bonus = Bonus.new()
@@ -14,40 +21,46 @@ var store = Store.new()
 var machine
 var hud
 var feedback
-var preview_skin_id:=""
+var preview_skin_id: = ""
 var speech
-var harvest_total:=0
+var harvest_total: = 0
 var coin_designer
 var shake_detector
 var jackpot_fx
-var voice_waiting := false
-var mechanism := "classic"
+var voice_waiting: = false
+var mechanism: = "classic"
 var viewport_container: SubViewportContainer
 var viewport: SubViewport
-var practice := false
-var paused := false
-var test_mode := false
-var boards := {}
-var save_elapsed := 0.0
-var today := ""
-var ready_to_save := false
-var payout_amount := 0
-var payout_elapsed := 0.0
-var save_failed := false
+var practice: = false
+var paused: = false
+var test_mode: = false
+var boards: = {}
+var save_elapsed: = 0.0
+var today: = ""
+var ready_to_save: = false
+var payout_amount: = 0
+var payout_elapsed: = 0.0
+var save_failed: = false
+var save_queued: = false
+var settlement_prompted: = false
+const HOLD_DELAY: = 0.35
+const HOLD_INTERVAL: = 0.2
+var coin_hold: = false
+var coin_hold_clock: = 0.0
 
-func _ready() -> void:
+func _ready() -> void :
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().auto_accept_quit = false
 	if OS.get_cmdline_user_args().has("--test-mode"):
 		test_mode = true
-	var backdrop=preload("res://scripts/arcade_backdrop.gd").new()
+	var backdrop = preload("res://scripts/arcade_backdrop.gd").new()
 	add_child(backdrop)
 	viewport_container = SubViewportContainer.new()
 	viewport_container.stretch = true
 	viewport_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(viewport_container)
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(450,450)
+	viewport.size = Vector2i(450, 450)
 	viewport.msaa_3d = Viewport.MSAA_4X
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.handle_input_locally = false
@@ -58,96 +71,112 @@ func _ready() -> void:
 	machine.coin_exited.connect(on_coin_exited)
 	machine.coin_dropped.connect(on_coin_dropped)
 	machine.spin_hit.connect(on_spin_hit)
-	machine.coins_cleared.connect(func(count):hud.toast("台面超过 1,000 枚 · 随机消除 %d 枚" % count))
-	machine.rainbow.started.connect(func():hud.toast("幸运彩球！准备砸向推盘"))
-	machine.rainbow.impacted.connect(func():
+	machine.coins_cleared.connect( func(count): hud.toast("台面超过 1,000 枚 · 随机消除 %d 枚" % count))
+	machine.rainbow.started.connect( func(): hud.toast("幸运彩球！准备砸向推盘"))
+	machine.rainbow.impacted.connect( func():
 		hud.toast("彩球砸台！前口掉落才到账")
 		persist.call_deferred())
-	machine.tower.prize_ready=func():return bonus.ready_coin_count()>=50
-	machine.tower.prize_appeared.connect(func(count):
-		for i in range(count):bonus.consume_coin())
-	machine.tower.appeared.connect(func(count):
-		if not practice:wallet.record("towers")
+	machine.tower.prize_ready = func(): return bonus.ready_coin_count() >= 50
+	machine.tower.prize_appeared.connect( func(count):
+		for i in range(count): bonus.consume_coin())
+	machine.tower.appeared.connect( func(count):
+		if not practice: wallet.record("towers")
 		hud.toast("旋风带来 %d 枚金币塔 · 推到前口才到账" % count)
 		persist())
-	speech=Speech.new()
+	speech = Speech.new()
 	add_child(speech)
 	speech.recognized.connect(on_voice_recognized)
 	speech.failed.connect(on_voice_failed)
-	speech.status.connect(func(message):
-		if voice_waiting:hud.show_voice(message,true))
+	speech.status.connect( func(message):
+		if voice_waiting: hud.show_voice(message, true))
 	feedback = Feedback.new()
 	add_child(feedback)
 	machine.metal_hit.connect(feedback.play_collision)
-	machine.coin_landed.connect(func():feedback.play("drop"))
+	machine.coin_landed.connect( func(): feedback.play("drop"))
 	hud = Hud.new()
 	add_child(hud)
-	jackpot_fx=preload("res://scripts/jackpot_fx.gd").new()
+	jackpot_fx = preload("res://scripts/jackpot_fx.gd").new()
 	hud.add_child(jackpot_fx)
+	updater = preload("res://scripts/app_update.gd").new()
+	add_child(updater)
+	hud.update_requested.connect(open_update)
+	updater.changed.connect( func():
+		if update_panel_open and paused: hud.show_update(updater))
+	updater.update_available.connect( func(): hud.toast("发现新版本 · 在暂停菜单查看更新"))
+	thief_view = preload("res://scripts/thief_view.gd").new()
+	hud.add_child(thief_view)
+	thief_view.repel_requested.connect(repel_thief)
+	hud.challenges_requested.connect( func():
+		set_paused(true)
+		hud.show_challenges(challenges, thief))
+	hud.ui_requested.connect( func(): feedback.play("ui"))
 	hud.drop_requested.connect(request_coin)
+	hud.drop_button.button_down.connect(start_coin_hold)
+	hud.drop_button.button_up.connect(stop_coin_hold)
+	hud.drop_button.mouse_exited.connect(stop_coin_hold)
 	hud.test_requested.connect(toggle_test_target)
 	hud.tower_test_requested.connect(test_coin_tower)
-	hud.clear_requested.connect(func():
+	hud.clear_requested.connect( func():
 		set_paused(false)
 		clear_machine())
-	shake_detector=preload("res://scripts/shake_detector.gd").new()
-	shake_detector.process_mode=Node.PROCESS_MODE_PAUSABLE
+	shake_detector = preload("res://scripts/shake_detector.gd").new()
+	shake_detector.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(shake_detector)
 	shake_detector.shaken.connect(clear_machine)
-	hud.aim_requested.connect(func():
+	hud.aim_requested.connect( func():
 		if not paused:
 			machine.toggle_aim()
 			persist()
 			refresh())
 	hud.pause_requested.connect(open_pause)
-	hud.resume_requested.connect(func():set_paused(false))
+	hud.resume_requested.connect( func(): set_paused(false))
 	hud.mode_requested.connect(switch_mode)
-	hud.collection_requested.connect(func():
+	hud.collection_requested.connect( func():
 		set_paused(true)
 		hud.show_collection(wallet))
-	hud.help_requested.connect(func():
+	hud.help_requested.connect( func():
 		set_paused(true)
 		hud.show_help())
 	hud.voice_requested.connect(open_voice)
 	hud.voice_start_requested.connect(start_voice)
 	hud.phrase_submitted.connect(submit_phrase)
-	hud.mechanism_requested.connect(func():
+	hud.mechanism_requested.connect( func():
 		set_paused(true)
 		hud.show_mechanisms(mechanism))
 	hud.mechanism_selected.connect(change_mechanism)
-	hud.shop_requested.connect(func():
+	hud.shop_requested.connect( func():
 		set_paused(true)
 		hud.show_shop(wallet))
-	coin_designer=preload("res://scripts/coin_designer.gd").new()
-	coin_designer.hud=hud
+	coin_designer = preload("res://scripts/coin_designer.gd").new()
+	coin_designer.hud = hud
 	add_child(coin_designer)
-	coin_designer.applied.connect(func(texture):
+	coin_designer.applied.connect( func(texture):
 		machine.apply_coin_stamp(texture)
-		if texture!=null:
-			wallet.records["custom"]=1
+		if texture != null:
+			wallet.records["custom"] = 1
 			wallet.daily_record("custom")
 		persist())
 	machine.apply_coin_stamp(coin_designer.current)
-	hud.titles_requested.connect(func():set_paused(true);hud.show_titles(wallet))
-	hud.title_selected.connect(func(index):
-		if wallet.equip_title(index):persist();refresh();hud.show_titles(wallet,index>=100))
-	hud.restart_requested.connect(func():set_paused(true);hud.show_restart())
+	hud.titles_requested.connect( func(): set_paused(true);hud.show_titles(wallet))
+	hud.title_selected.connect( func(index):
+		if wallet.equip_title(index): persist();refresh();hud.show_titles(wallet, index >= 100))
+	hud.restart_requested.connect( func(): set_paused(true);hud.show_restart())
 	hud.restart_confirmed.connect(restart_round)
 	hud.settlement_requested.connect(open_settlement)
 	hud.settlement_confirmed.connect(settle_pending_prizes)
-	hud.coin_design_requested.connect(func():set_paused(true);coin_designer.show_editor())
+	hud.coin_design_requested.connect( func(): set_paused(true);coin_designer.show_editor())
 	hud.skin_preview_requested.connect(preview_skin)
 	hud.skin_preview_closed.connect(close_skin_preview)
-	hud.skin_requested.connect(func(id):
+	hud.skin_requested.connect( func(id):
 		if wallet.buy_skin(id):
-			preview_skin_id=""
+			preview_skin_id = ""
 			apply_visual_skin(wallet.equipped_skin)
 			persist()
 			refresh()
 			hud.show_shop(wallet))
-	hud.settings_changed.connect(func(sound,haptic,music):
-		feedback.enabled=sound
-		feedback.haptics=haptic
+	hud.settings_changed.connect( func(sound, haptic, music):
+		feedback.enabled = sound
+		feedback.haptics = haptic
 		feedback.set_music_enabled(music)
 		persist())
 	resized.connect(layout)
@@ -155,50 +184,63 @@ func _ready() -> void:
 	var saved: Dictionary = {} if test_mode else store.read()
 	if not saved.is_empty():
 		wallet.restore(saved.wallet)
+		thief.restore(saved.get("thief", {}))
+		challenges.restore(saved.get("challenges", {}))
 		boards = saved.boards
-		mechanism=saved.get("mechanism","classic")
-		if mechanism not in ["classic","split","sweep"]:mechanism="classic"
-		practice = saved.get("practice",false) == true
-		feedback.enabled = saved.settings.get("sound",true) == true
-		feedback.haptics = saved.settings.get("haptic",true) == true
-		feedback.set_music_enabled(saved.settings.get("music",true) == true)
+		mechanism = saved.get("mechanism", "classic")
+		if mechanism not in ["classic", "split", "sweep"]: mechanism = "classic"
+		practice = saved.get("practice", false) == true
+		feedback.enabled = saved.settings.get("sound", true) == true
+		feedback.haptics = saved.settings.get("haptic", true) == true
+		feedback.set_music_enabled(saved.settings.get("music", true) == true)
 		if saved.get("bonus") is Dictionary:
 			(inactive_bonus if practice else bonus).restore(saved.bonus)
 		if saved.get("practice_bonus") is Dictionary:
 			(bonus if practice else inactive_bonus).restore(saved.practice_bonus)
 	machine.configure_mechanism(mechanism)
-	var board = boards.get(board_key(),{})
+	var board = boards.get(board_key(), {})
 	machine.restore(board if board is Dictionary else {})
 	apply_visual_skin(wallet.equipped_skin)
 	ready_to_save = true
 	grant_daily()
 	persist()
 	refresh()
+	if not test_mode and OS.get_name() == "Android": updater.check.call_deferred(true)
 	if store.recovered:
 		hud.toast("已从备份恢复进度")
 
-func layout() -> void:
+func layout() -> void :
 	if hud == null:
 		return
 	hud.size = size
 	hud.layout()
+	if thief_view != null:
+		thief_view.position = Vector2(16, hud.footer.position.y - 208)
+		thief_view.size = Vector2(size.x - 32, 132)
 	viewport_container.position = hud.stage_rect.position
-	var pixel_scale:float=clampf(float(DisplayServer.window_get_size().x)/maxf(size.x,1),1.5,2.0)
-	viewport_container.scale=Vector2.ONE/pixel_scale
-	viewport_container.size = hud.stage_rect.size*pixel_scale
+	var pixel_scale: float = clampf(float(DisplayServer.window_get_size().x) / maxf(size.x, 1), 1.5, 2.0)
+	viewport_container.scale = Vector2.ONE / pixel_scale
+	viewport_container.size = hud.stage_rect.size * pixel_scale
 
 func board_key() -> String:
-	return ("practice" if mechanism=="classic" else mechanism+"_practice") if practice else mechanism
+	return ("practice" if mechanism == "classic" else mechanism + "_practice") if practice else mechanism
 
-func grant_daily() -> void:
+func grant_daily() -> void :
 	wallet.ensure_title_day()
 	today = Time.get_date_string_from_system()
-	if wallet.claim_daily(today)>0:
-		hud.toast("今日补给 +5,000，慢慢玩")
+	challenges.ensure_day(today)
+	var previously_owned: Array = wallet.owned_skins.duplicate()
+	if wallet.claim_daily(today) > 0:
+		var unlocked_names: PackedStringArray = []
+		for id in wallet.owned_skins:
+			if not previously_owned.has(id): unlocked_names.append(Wallet.SKINS[id].name)
+		var notice: = "今日补给 +%s · 连续登录 %d 天" % [Hud.format_number(Wallet.DAILY), wallet.login_streak]
+		if not unlocked_names.is_empty(): notice += "\n永久解锁：" + "、".join(unlocked_names)
+		hud.toast(notice)
 		persist()
 		refresh()
 
-func request_coin() -> void:
+func request_coin() -> void :
 	if paused or save_failed:
 		return
 	if not machine.accepts_coin():
@@ -212,73 +254,121 @@ func request_coin() -> void:
 	machine.tower.input_accepted()
 	machine.rainbow.input_accepted()
 	feedback.pulse()
-	if wallet.unlocked_count()>unlocked:
+	feedback.play("insert")
+	if not practice:
+		record_challenge("inserted")
+
+		if bonus.presentation <= 0 and thief.input_accepted(wallet.balance):
+			stop_coin_hold()
+			feedback.play("alert")
+			hud.toast("夜行小偷！5 秒内点击驱赶 3 次")
+	if wallet.unlocked_count() > unlocked:
 		hud.toast("收藏解锁 · " + Wallet.COLLECTION_NAMES[unlocked])
 	persist()
 	refresh()
 
-func on_coin_dropped() -> void:
+func start_coin_hold() -> void :
+	if paused or save_failed or hud.drop_button.disabled or ( not practice and thief.active()):
+		return
+	coin_hold = true
+	coin_hold_clock = HOLD_DELAY
+
+func stop_coin_hold() -> void :
+	coin_hold = false
+	coin_hold_clock = 0.0
+
+func tick_coin_hold(delta: float) -> void :
+	if not coin_hold:
+		return
+	if paused or save_failed or hud.drop_button.disabled or not machine.accepts_coin() or ( not practice and thief.active()):
+		stop_coin_hold()
+		return
+	coin_hold_clock -= delta
+	if coin_hold_clock <= 0:
+
+		coin_hold_clock = HOLD_INTERVAL
+		request_coin()
+
+func _input(event: InputEvent) -> void :
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		stop_coin_hold()
+	elif event is InputEventScreenTouch and not event.pressed:
+		stop_coin_hold()
+	elif event is InputEventKey and event.keycode == KEY_SPACE and not event.pressed:
+		stop_coin_hold()
+
+func on_coin_dropped() -> void :
+	queue_persist()
+	refresh()
+
+func on_spin_hit() -> void :
+	var accepted: bool = bonus.trigger()
+	feedback.play("target")
+	if accepted: feedback.play("spin")
+	hud.toast(("命中移动靶！" + ("抽奖已排队" if bonus.pending_spins > 0 else "三滚轮启动")) if accepted else "本轮连抽已达 2 次 · 继续推币收奖")
 	persist()
 	refresh()
 
-func on_spin_hit() -> void:
-	var accepted:bool=bonus.trigger()
-	hud.toast(("命中移动靶！" + ("抽奖已排队" if bonus.pending_spins>0 else "三滚轮启动")) if accepted else "本轮连抽已达 2 次 · 继续推币收奖")
-	persist()
-	refresh()
-
-func on_coin_exited(front: bool, _at: Vector3, _is_bonus := false) -> void:
+func on_coin_exited(front: bool, _at: Vector3, _is_bonus: = false) -> void :
 	if front:
 		wallet.reward_front(practice)
 		feedback.play("drop")
 		if not practice:
-			harvest_total+=Wallet.COST
+			harvest_total += Wallet.COST
+			feedback.play("collect")
+			record_challenge("collected", Wallet.COST)
 			payout_amount += Wallet.COST
 			payout_elapsed = 0.3
 			hud.payout(payout_amount)
-	persist()
+	queue_persist()
 	refresh()
 
-func refresh() -> void:
-	jackpot_fx.sync_state(bonus.reward,bonus.presentation)
+func refresh() -> void :
+	if thief_view != null: thief_view.sync_state(thief, not practice and not paused and bonus.presentation <= 0)
+	jackpot_fx.sync_state(bonus.reward, bonus.presentation)
 	hud.update_aim(machine.aim_locked)
-	hud.update_slot(bonus,practice,harvest_total)
-	machine.premium.sync_bonus(bonus,practice)
-	hud.update_state(wallet,practice,machine.pending.size(),machine.pending.size()+machine.coins.get_child_count(),mechanism)
+	hud.update_slot(bonus, practice, harvest_total)
+	machine.premium.sync_bonus(bonus, practice)
+	hud.update_state(wallet, practice, machine.pending.size(), machine.pending.size() + machine.coins.get_child_count(), mechanism)
 
-func switch_mode() -> void:
+func switch_mode() -> void :
+	stop_coin_hold()
 	if paused:
 		return
-	# Synchronous detach means no old-board exit callback can reward the new mode.
+
 	boards[board_key()] = machine.snapshot()
 	practice = not practice
-	machine.test_target=false
-	hud.test_enabled=false
-	var previous_bonus=bonus
-	bonus=inactive_bonus
-	inactive_bonus=previous_bonus
+	machine.test_target = false
+	hud.test_enabled = false
+	var previous_bonus = bonus
+	bonus = inactive_bonus
+	inactive_bonus = previous_bonus
 	machine.configure_mechanism(mechanism)
-	var board = boards.get(board_key(),{})
+	var board = boards.get(board_key(), {})
 	machine.restore(board if board is Dictionary else {})
 	payout_amount = 0
 	persist()
 	refresh()
 	hud.toast("自由练习 · 无限投币，不计收益" if practice else "已回到正式台，接着慢慢推")
 
-func open_pause() -> void:
+func open_pause() -> void :
+	update_panel_open = false
 	set_paused(true)
-	hud.show_pause(feedback.enabled,feedback.haptics,feedback.music_enabled)
+	hud.show_pause(feedback.enabled, feedback.haptics, feedback.music_enabled)
 
-func set_paused(value: bool) -> void:
+func set_paused(value: bool) -> void :
+	if not value: update_panel_open = false
+	if value: stop_coin_hold()
 	if not value and not preview_skin_id.is_empty():
-		preview_skin_id=""
+		preview_skin_id = ""
 		apply_visual_skin(wallet.equipped_skin)
 	paused = value
+	if thief_view != null: thief_view.sync_state(thief, not practice and not paused and bonus.presentation <= 0)
 	get_tree().paused = value
 	if not value:
 		if voice_waiting:
 			speech.stop()
-			voice_waiting=false
+			voice_waiting = false
 		hud.close_modal()
 		if save_failed:
 			persist()
@@ -287,11 +377,24 @@ func set_paused(value: bool) -> void:
 		persist()
 
 func make_save() -> Dictionary:
-	var current_boards := boards.duplicate(true)
+	var current_boards: = boards.duplicate(true)
 	current_boards[board_key()] = machine.snapshot()
-	return {"version":1,"wallet":wallet.to_dict(),"boards":current_boards,"practice":practice,"mechanism":mechanism,"settings":{"sound":feedback.enabled,"haptic":feedback.haptics,"music":feedback.music_enabled},"bonus":(inactive_bonus if practice else bonus).to_dict(),"practice_bonus":(bonus if practice else inactive_bonus).to_dict()}
+	return {"version": 1, "thief": thief.to_dict(), "challenges": challenges.to_dict(), "wallet": wallet.to_dict(), "boards": current_boards, "practice": practice, "mechanism": mechanism, "settings": {"sound": feedback.enabled, "haptic": feedback.haptics, "music": feedback.music_enabled}, "bonus": (inactive_bonus if practice else bonus).to_dict(), "practice_bonus": (bonus if practice else inactive_bonus).to_dict()}
 
-func persist() -> void:
+
+
+func queue_persist() -> void :
+	if not ready_to_save or test_mode or save_queued:
+		return
+	save_queued = true
+	flush_queued_save.call_deferred()
+
+func flush_queued_save() -> void :
+	if save_queued:
+		persist()
+
+func persist() -> void :
+	save_queued = false
 	if not ready_to_save or test_mode:
 		return
 	if not store.write(make_save()):
@@ -300,38 +403,53 @@ func persist() -> void:
 	else:
 		save_failed = false
 
-func _physics_process(delta: float) -> void:
+func _physics_process(delta: float) -> void :
 	if not ready_to_save or paused:
 		return
 	if bonus.tick(delta):
-		var prize:int=bonus.reward
-		if prize>0:
+		var prize: int = bonus.reward
+		if prize > 0:
 			if not practice:
 				wallet.record("jackpots")
-				wallet.records["best_prize"]=maxi(int(wallet.records.get("best_prize",0)),prize)
+				wallet.records["best_prize"] = maxi(int(wallet.records.get("best_prize", 0)), prize)
 			jackpot_fx.celebrate(prize)
+			feedback.play("reward_small" if prize == 58 else ("reward_medium" if prize == 388 else ("reward_big" if prize in [2888, 2999] else "reward_grand")))
 			hud.toast("三同中奖！%s 枚，演出结束后开始吐币" % Hud.format_number(prize))
 		else:
-			hud.toast("这次未连成三同，继续慢慢推")
+			feedback.play("miss")
+			hud.toast("这次未连成三同，继续观察落点")
 		persist()
 		refresh()
-	if bonus.can_dispense() and bonus.dispense_clock<=0 and machine.clearing<=0:
-		var tower_waiting:bool=bonus.remaining>=500 and bonus.ready_coin_count()>=50 and machine.tower.request_prize_tower()
-		if not tower_waiting and machine.pinboard_count()<32:
-			var coin=machine.dispense_bonus(bonus.payout_tier(),bonus.payout_emitted())
-			if coin!=null:
+	if maybe_prompt_settlement():
+		return
+	if bonus.can_dispense() and bonus.dispense_clock <= 0 and machine.clearing <= 0:
+		var tower_waiting: bool = bonus.remaining >= 500 and bonus.ready_coin_count() >= 50 and machine.tower.request_prize_tower()
+		if not tower_waiting and machine.pinboard_count() < 32:
+			var coin = machine.dispense_bonus(bonus.payout_tier(), bonus.payout_emitted())
+			if coin != null:
 				bonus.consume_coin()
 				persist()
 				refresh()
-		bonus.dispense_clock=[0.08,0.06,0.06,0.05][bonus.payout_tier()]
-	jackpot_fx.sync_state(bonus.reward,bonus.presentation)
-	hud.update_slot(bonus,practice,harvest_total)
-	machine.premium.sync_bonus(bonus,practice)
+		bonus.dispense_clock = [0.08, 0.06, 0.06, 0.05][bonus.payout_tier()]
+	jackpot_fx.sync_state(bonus.reward, bonus.presentation)
+	hud.update_slot(bonus, practice, harvest_total)
+	machine.premium.sync_bonus(bonus, practice)
 
-func _process(delta: float) -> void:
-	if jackpot_fx!=null:position=Vector2.ZERO if paused else jackpot_fx.screen_shake()
+func _process(delta: float) -> void :
+	if jackpot_fx != null: position = Vector2.ZERO if paused else jackpot_fx.screen_shake()
 	if not ready_to_save:
 		return
+	if not paused and not practice and not save_failed and bonus.presentation <= 0:
+		var was_active: bool = thief.active()
+		var lost: int = thief.tick(delta, wallet.balance)
+		if was_active and not thief.active():
+			wallet.balance -= lost
+			feedback.play("theft")
+			hud.toast("小偷逃走了 · 钱包 -%d 金币" % lost)
+			persist()
+			refresh()
+	thief_view.sync_state(thief, not practice and not paused and bonus.presentation <= 0)
+	tick_coin_hold(delta)
 	save_elapsed += delta
 	if save_elapsed >= 2:
 		save_elapsed = 0
@@ -339,33 +457,36 @@ func _process(delta: float) -> void:
 			grant_daily()
 		if not paused:
 			persist()
-	if payout_elapsed>0:
-		payout_elapsed-=delta
-		if payout_elapsed<=0:
-			payout_amount=0
+	if payout_elapsed > 0:
+		payout_elapsed -= delta
+		if payout_elapsed <= 0:
+			payout_amount = 0
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func _unhandled_key_input(event: InputEvent) -> void :
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode==KEY_SPACE:
+		if event.keycode == KEY_SPACE:
 			request_coin()
-		elif event.keycode==KEY_ESCAPE:
+			start_coin_hold()
+		elif event.keycode == KEY_ESCAPE:
 			if paused:
 				set_paused(false)
 			else:
 				open_pause()
 
-func _notification(what: int) -> void:
+func _notification(what: int) -> void :
+	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
+		stop_coin_hold()
 	if not ready_to_save:
 		return
-	if coin_designer!=null and coin_designer.picking:
-		if what==NOTIFICATION_APPLICATION_PAUSED:persist()
+	if coin_designer != null and coin_designer.picking:
+		if what == NOTIFICATION_APPLICATION_PAUSED: persist()
 		return
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if voice_waiting:
 			persist()
-			if what==NOTIFICATION_APPLICATION_PAUSED and OS.get_name()=="iOS":
+			if what == NOTIFICATION_APPLICATION_PAUSED and OS.get_name() == "iOS":
 				speech.stop()
-				voice_waiting=false
+				voice_waiting = false
 		else:
 			open_pause()
 	elif what == NOTIFICATION_APPLICATION_RESUMED:
@@ -376,107 +497,117 @@ func _notification(what: int) -> void:
 		persist()
 		get_tree().quit()
 
-func change_mechanism(id: String) -> void:
-	if id not in ["classic","split","sweep"]:return
-	boards[board_key()]=machine.snapshot()
-	mechanism=id
+func change_mechanism(id: String) -> void :
+	if id not in ["classic", "split", "sweep"]: return
+	boards[board_key()] = machine.snapshot()
+	mechanism = id
 	machine.configure_mechanism(id)
-	machine.restore(boards.get(board_key(),{}))
+	machine.restore(boards.get(board_key(), {}))
 	apply_visual_skin(wallet.equipped_skin)
 	persist()
 	refresh()
 	set_paused(false)
 
-func open_voice() -> void:
+func open_voice() -> void :
 	set_paused(true)
 	hud.show_voice("可直接输入，也可用输入法语音。确认文字后领取。")
 
-func start_voice() -> void:
+func start_voice() -> void :
 	if practice:
 		hud.show_voice("请先返回正式机台，再领取语音补给。")
 		return
-	voice_waiting=true
-	hud.show_voice("正在请求麦克风，请留意系统权限提示…",true)
+	voice_waiting = true
+	hud.show_voice("正在请求麦克风，请留意系统权限提示…", true)
 	speech.listen()
 
-func on_voice_recognized(text: String) -> void:
-	if not voice_waiting:return
-	voice_waiting=false
-	var amount:int=wallet.claim_voice(text)
+func on_voice_recognized(text: String) -> void :
+	if not voice_waiting: return
+	voice_waiting = false
+	var amount: int = wallet.claim_voice(text)
 	persist()
 	refresh()
-	hud.show_voice("识别：%s\n+%s 金币已到账！" % [text,Hud.format_number(amount)] if amount>0 else "识别：%s\n口令不匹配，或该口令需要余额低于 500。" % text)
+	hud.show_voice("识别：%s\n+%s 金币已到账！" % [text, Hud.format_number(amount)] if amount > 0 else "识别：%s\n口令需匹配，余额低于 %d，且每日只能领取一次。" % [text, Wallet.VOICE_BALANCE_LIMIT])
 
-func on_voice_failed(message: String) -> void:
-	voice_waiting=false
+func on_voice_failed(message: String) -> void :
+	voice_waiting = false
 	hud.show_voice(message)
 
-func toggle_test_target() -> void:
-	var enabled:bool=not machine.test_target
+func toggle_test_target() -> void :
+	var enabled: bool = not machine.test_target
 	set_paused(false)
-	if enabled and not practice:switch_mode()
-	machine.test_target=enabled
-	hud.test_enabled=enabled
+	if enabled and not practice: switch_mode()
+	machine.test_target = enabled
+	hud.test_enabled = enabled
 	hud.toast("测试开启：按投币必进中间洞，奖币也走此路径" if enabled else "测试关闭：恢复真实碰撞")
 
 
-func clear_machine() -> void:
-	if paused:return
-	if machine.shakeable_count()==0:
+func clear_machine() -> void :
+	if paused: return
+	if machine.shakeable_count() == 0:
 		hud.toast("上方钉板没有金币需要震落 · 下方推盘照常运行")
 		return
 	machine.shake_clear()
-	if OS.has_feature("mobile") and feedback.haptics:Input.vibrate_handheld(100,0.5)
+	if OS.has_feature("mobile") and feedback.haptics: Input.vibrate_handheld(100, 0.5)
 	hud.toast("正在震落上方卡币 · 下方推盘照常运行")
 	persist()
 
-func submit_phrase(text: String) -> void:
+func submit_phrase(text: String) -> void :
 	if practice:
 		hud.show_voice("请先返回正式台，再领取口令补给。")
 		return
-	if voice_waiting:speech.stop()
-	voice_waiting=true
+	if voice_waiting: speech.stop()
+	voice_waiting = true
 	DisplayServer.virtual_keyboard_hide()
 	on_voice_recognized(text)
 
-func apply_visual_skin(id:String)->void:
+func apply_visual_skin(id: String) -> void :
 	machine.apply_skin(id)
-	hud.premium_layout=id=="clown_deluxe"
+	hud.premium_layout = id == "clown_deluxe"
 	layout()
-	machine.premium.sync_bonus(bonus,practice)
-func preview_skin(id:String)->void:
-	if not wallet.SKINS.has(id):return
+	machine.premium.sync_bonus(bonus, practice)
+func preview_skin(id: String) -> void :
+	if not wallet.SKINS.has(id): return
 	set_paused(true)
-	preview_skin_id=id
+	preview_skin_id = id
 	apply_visual_skin(id)
 	hud.show_skin_preview(wallet.SKINS[id].name)
-func close_skin_preview()->void:
-	preview_skin_id=""
+func close_skin_preview() -> void :
+	preview_skin_id = ""
 	apply_visual_skin(wallet.equipped_skin)
 	hud.show_shop(wallet)
 
-func test_coin_tower()->void:
+func test_coin_tower() -> void :
 	set_paused(false)
-	if not practice:switch_mode()
-	machine.tower.inputs=12
-	machine.tower.wait_seconds=0
+	if not practice: switch_mode()
+	machine.tower.inputs = machine.tower.NATURAL_INPUTS
+	machine.tower.wait_seconds = 0
 	hud.toast("练习测试 · 有空位时旋风带来金币塔")
 	persist()
 
-func open_settlement()->void:
-	if practice or bonus.remaining<=bonus.SETTLEMENT_THRESHOLD:return
+func maybe_prompt_settlement() -> bool:
+	if practice: return false
+	if bonus.remaining <= bonus.SETTLEMENT_THRESHOLD:
+		settlement_prompted = false
+		return false
+	if paused or save_failed or bonus.presentation > 0 or settlement_prompted: return false
+	open_settlement()
+	return true
+
+func open_settlement() -> void :
+	if practice or bonus.remaining <= bonus.SETTLEMENT_THRESHOLD: return
+	settlement_prompted = true
 	set_paused(true)
-	hud.show_settlement(bonus.remaining,bonus.pending_spins+(1 if bonus.spinning else 0))
-func settle_pending_prizes()->void:
-	if practice or not paused or bonus.remaining<=bonus.SETTLEMENT_THRESHOLD:return
-	var old_bonus:Dictionary=bonus.to_dict()
-	var old_tower:Dictionary=machine.tower.snapshot()
-	var old_wallet:Dictionary=wallet.to_dict()
-	var old_balance:int=wallet.balance
-	var owed:int=bonus.remaining
-	var percent:=randi_range(1,90)
-	var received:int=bonus.settle_pending(percent)
-	wallet.balance+=received
+	hud.show_settlement(bonus.remaining, bonus.pending_spins + (1 if bonus.spinning else 0))
+func settle_pending_prizes() -> void :
+	if practice or not paused or bonus.remaining <= bonus.SETTLEMENT_THRESHOLD: return
+	var old_bonus: Dictionary = bonus.to_dict()
+	var old_tower: Dictionary = machine.tower.snapshot()
+	var old_wallet: Dictionary = wallet.to_dict()
+	var old_balance: int = wallet.balance
+	var owed: int = bonus.remaining
+	var percent: = randi_range(1, 90)
+	var received: int = bonus.settle_pending(percent)
+	wallet.balance += received
 	wallet.record("roulette")
 	machine.tower.cancel_prize()
 	persist()
@@ -487,22 +618,47 @@ func settle_pending_prizes()->void:
 		hud.toast("保存失败，本次未结算，请重试")
 		return
 	refresh()
-	hud.show_settlement_result(bonus.last_settlement_pool,percent,received)
+	hud.show_settlement_result(bonus.last_settlement_pool, percent, received)
 
-func restart_round()->void:
-	if not paused:return
-	if not practice:wallet.record("restarts")
-	var paid_inputs:int=machine.pending.size()
-	if not practice:wallet.balance+=paid_inputs*Wallet.COST
+func restart_round() -> void :
+	if not paused: return
+	if not practice: wallet.record("restarts")
+	var paid_inputs: int = machine.pending.size()
+	if not practice: wallet.balance += paid_inputs * Wallet.COST
 	machine.restore({})
-	machine.test_target=false
-	hud.test_enabled=false
-	harvest_total=0
-	payout_amount=0
-	payout_elapsed=0
-	hud.payout_label.visible=false
-	boards[board_key()]=machine.snapshot()
+	machine.test_target = false
+	hud.test_enabled = false
+	harvest_total = 0
+	payout_amount = 0
+	payout_elapsed = 0
+	hud.payout_label.visible = false
+	boards[board_key()] = machine.snapshot()
 	persist()
 	set_paused(false)
 	refresh()
 	hud.toast("新一局已开始 · 金币与未发奖励保留")
+
+func repel_thief() -> void :
+	if paused or practice or save_failed or bonus.presentation > 0 or not thief.active(): return
+	stop_coin_hold()
+	feedback.pulse()
+	if thief.repel():
+		feedback.play("repel")
+		var previous_stamps: int = challenges.completed_total
+		record_challenge("chased")
+		hud.toast("成功驱赶 · 钱包保住了！" + ("\n今日挑战完成 · 收藏印章 +1" if challenges.completed_total > previous_stamps else ""))
+	else:
+		feedback.play("ui")
+	persist()
+	refresh()
+
+func record_challenge(kind: String, amount: int = 1) -> void :
+	var completed: Array = challenges.record(kind, amount, Time.get_date_string_from_system())
+	if not completed.is_empty():
+		hud.toast("挑战完成 · %s · 收藏印章 +%d" % ["、".join(completed), completed.size()])
+
+func open_update() -> void :
+	set_paused(true)
+	update_panel_open = true
+	hud.show_update(updater)
+	if updater.state not in ["checking", "downloading", "available", "ready"]: updater.check()

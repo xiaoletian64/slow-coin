@@ -1,265 +1,281 @@
 extends Control
-# Original vector characters, articulated directly in-game (not a static popup).
-const DURATION:=3.4
-var clock:=0.0
-var amount:=0
-var caption:Label
-var reward_label:Label
-var panel_center:=Vector2.ZERO
-var scene_scale:=1.0
-func _ready()->void:
-	mouse_filter=Control.MOUSE_FILTER_IGNORE
+
+
+const DURATION: = 3.4
+var clock: = 0.0
+var amount: = 0
+var caption: Label
+var reward_label: Label
+var unit_label: Label
+var payout_hint: Label
+var panel_center: = Vector2.ZERO
+var scene_scale: = 1.0
+var _font: FontVariation
+var _tier: = 0
+var _accent: = Color("e5c78b")
+var _secondary: = Color("92c5c9")
+
+func _ready() -> void :
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	caption=Label.new()
-	reward_label=Label.new()
-	for node in [caption,reward_label]:
-		node.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-		node.mouse_filter=Control.MOUSE_FILTER_IGNORE
-		node.add_theme_color_override("font_color",Color("fff0c8"))
-		add_child(node)
-	caption.add_theme_font_size_override("font_size",21)
-	reward_label.add_theme_font_size_override("font_size",32)
-	visible=false
-func celebrate(prize:int,remaining:=DURATION)->void:
-	amount=prize
-	clock=remaining
-	visible=clock>0
-	update_layout()
+	_font = FontVariation.new()
+	_font.base_font = load("res://assets/fonts/NotoSansSC.ttf")
+	_font.variation_opentype = {2003265652: 650.0}
+	caption = _label(19, Color("e8d6ac"))
+	reward_label = _label(72, Color("fff0c5"))
+	unit_label = _label(13, Color("b8cad1"))
+	payout_hint = _label(12, Color("92a9b8"))
+	resized.connect(_resize_presentation)
+	visible = clock > 0.0
+	if visible: update_layout()
+
+func _label(font_size: int, color: Color) -> Label:
+	var node: = Label.new()
+	node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	node.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	node.add_theme_font_override("font", _font)
+	node.add_theme_font_size_override("font_size", font_size)
+	node.add_theme_color_override("font_color", color)
+	node.add_theme_color_override("font_shadow_color", Color(0.01, 0.025, 0.04, 0.7))
+	node.add_theme_constant_override("shadow_offset_y", 2)
+	add_child(node)
+	return node
+
+func celebrate(prize: int, remaining: = DURATION) -> void :
+	sync_state(prize, remaining)
+
+func sync_state(prize: int, remaining: float) -> void :
+	amount = maxi(0, prize)
+	clock = clampf(remaining, 0.0, DURATION)
+	visible = clock > 0.0 and amount > 0
+	_tier = 3 if amount >= 10000 else (2 if amount >= 2888 else (1 if amount >= 388 else 0))
+	_accent = [Color("e5c78b"), Color("edc96e"), Color("f2d18d"), Color("eee0b8")][_tier]
+	_secondary = [Color("92c5c9"), Color("93d9ce"), Color("78cbd2"), Color("a1bfe4")][_tier]
+	if visible and caption != null: update_layout()
 	queue_redraw()
-func sync_state(prize:int,remaining:float)->void:
-	amount=prize
-	clock=remaining
-	visible=clock>0
-	if visible:update_layout()
+
+func _resize_presentation() -> void :
+	if caption != null: update_layout()
 	queue_redraw()
-func update_layout()->void:
-	scene_scale=minf(1.0,(size.x-24)/410)
-	panel_center=Vector2(size.x/2,size.y*0.46)
-	var age:=DURATION-clock
-	caption.position=Vector2(0,panel_center.y-142*scene_scale)
-	caption.size=Vector2(size.x,34)
-	if amount==58:
-		caption.text="抓到毛球啦！" if age>=1.7 else "小猫发现了毛球…"
-	elif amount==388:
-		caption.text="啊呜，吃到火腿啦！" if age>=1.7 else "小狗闻到了香味…"
-	elif amount in [2888,2999]:caption.text="金币车爆开啦！" if age>=1.7 else "地震了！金币车来了…"
-	else:caption.text="金币宝库全开！" if age>=1.7 else "超级宝库正在开启…"
-	reward_label.position=Vector2(0,panel_center.y+97*scene_scale)
-	reward_label.size=Vector2(size.x,48)
-	reward_label.text="%s 金币" % amount if age>=1.7 else "…"
-	reward_label.modulate.a=clampf((age-1.55)*4,0,1)
-func oval(at:Vector2,radius:Vector2,color:Color)->void:
-	var points:=PackedVector2Array()
-	for i in range(48):
-		var a:float=i*TAU/48
-		points.append(at+Vector2(cos(a)*radius.x,sin(a)*radius.y))
-	draw_colored_polygon(points,color)
-func line(points:Array,color:Color,width:float)->void:
-	draw_polyline(PackedVector2Array(points),color,width,true)
-func _draw()->void:
-	if clock<=0:return
-	var age:=DURATION-clock
-	var fade:=minf(1,clock*3)
-	var panel:=StyleBoxFlat.new()
-	panel.bg_color=Color("213955") if amount==58 else Color("50354e")
-	panel.border_color=Color("e6bf79")
-	panel.set_border_width_all(2)
-	panel.set_corner_radius_all(24)
-	draw_style_box(panel,Rect2(panel_center-Vector2(205,161)*scene_scale,Vector2(410,322)*scene_scale))
-	draw_set_transform(panel_center,0,Vector2.ONE*scene_scale)
-	for i in range(7):
-		draw_circle(Vector2(-160+i*54,-73),2,Color("96b4c8"))
-	oval(Vector2(0,75),Vector2(167,13),Color(0.04,0.07,0.13,0.32))
-	if amount==58:cat_story(age)
-	elif amount==388:dog_story(age)
-	elif amount in [2888,2999]:cart_story(age)
-	else:vault_story(age)
-	if age>=1.65:
-		for i in range(18):
-			var a:float=i*2.399
-			var t:float=age-1.65
-			var at:=Vector2(cos(a),sin(a))*(40+t*60)+Vector2(0,-20+t*t*15)
-			var tint:Color=[Color("f8d775"),Color("89dcce"),Color("f4a3bd")][i%3]
-			tint.a=fade
-			draw_circle(at,2.5,tint)
+
+func update_layout() -> void :
+	scene_scale = clampf((size.x - 24.0) / 392.0, 0.45, 1.0)
+	panel_center = Vector2(size.x / 2.0, size.y * 0.475)
+	var age: = DURATION - clock
+	var arrival: = _ease_out(clampf(age / 0.5, 0, 1))
+	var fade: = smoothstep(0.0, 0.24, age) * (1.0 - smoothstep(2.94, DURATION, age))
+	var reveal: = smoothstep(0.56, 0.91, age)
+	var lift: = 12.0 * (1.0 - arrival) * scene_scale
+	caption.text = ["好 运 嘉 奖", "金 潮 加 赏", "大 奖 时 刻", "至 尊 头 奖"][_tier]
+	reward_label.text = _format_amount(amount)
+	unit_label.text = "枚奖励金币 · 待发放"
+	payout_hint.text = "演出结束后落币，推入前口后计入余额"
+	_place_label(caption, -141.0, 36.0, 19, fade, lift)
+	_place_label(reward_label, 14.0, 92.0, 72 if amount < 10000 else 65, fade * reveal, lift)
+	_place_label(unit_label, 118.0, 26.0, 13, fade * reveal, lift)
+	_place_label(payout_hint, 160.0, 24.0, 12, fade * smoothstep(0.88, 1.28, age), lift)
+
+func _place_label(node: Label, offset_y: float, height: float, font_size: int, alpha: float, lift: float) -> void :
+	node.position = Vector2(panel_center.x - 192.0 * scene_scale, panel_center.y + offset_y * scene_scale + lift)
+	node.size = Vector2(384.0, height) * scene_scale
+	node.add_theme_font_size_override("font_size", maxi(8, roundi(font_size * scene_scale)))
+	node.modulate.a = alpha
+
+static func _format_amount(value: int) -> String:
+	var digits: = str(value)
+	var result: = ""
+	for i in range(digits.length()):
+		if i > 0 and (digits.length() - i) % 3 == 0: result += ","
+		result += digits[i]
+	return result
+
+func _draw() -> void :
+	if clock <= 0 or amount <= 0: return
+	var age: = DURATION - clock
+	var arrival: = _ease_out(clampf(age / 0.5, 0, 1))
+	var fade: = smoothstep(0.0, 0.24, age) * (1.0 - smoothstep(2.94, DURATION, age))
+	var reveal: = smoothstep(0.55, 1.02, age)
+
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.022, 0.037, 0.24 * fade))
+	draw_set_transform(panel_center + Vector2(0, 12.0 * (1.0 - arrival) * scene_scale), 0, Vector2.ONE * scene_scale)
+	_draw_glass_card(fade)
+	var origin: = Vector2(0, -43)
+
+	for i in range(9, 0, -1):
+		var tint: = _secondary
+		tint.a = (0.005 + 0.0012 * _tier) * fade * reveal
+		draw_circle(origin, 47.0 + i * 7.0, tint)
+	if _tier >= 2: _draw_light_fan(origin, age, fade * reveal)
+	_draw_dial(origin, age, fade, reveal)
+	_draw_coin_arcs(origin, age, fade)
+	var coin_scale: = lerpf(0.28, 1.0, _ease_out(clampf((age - 0.12) / 0.72, 0, 1)))
+	var coin_squash: = lerpf(0.1, 1.0, smoothstep(0.16, 0.73, age))
+	_draw_coin(origin, 37.0 * coin_scale, coin_squash, fade, age * 0.5, true)
+	_draw_sparks(origin, age, fade)
+
+	var line_color: = _accent
+	line_color.a = fade * 0.28
+	draw_line(Vector2(-122, 151), Vector2(122, 151), line_color, 1, true)
+	var progress: = clampf(age / DURATION, 0, 1)
+	var track: = _secondary
+	track.a = 0.7 * fade
+	draw_line(Vector2(-35, 191), Vector2(-35 + 70 * progress, 191), track, 1.5, true)
 	draw_set_transform(Vector2.ZERO)
-func cat_story(age:float)->void:
-	var leap:=smoothstep(0.75,1.65,age)
-	var bounce:=sin(leap*PI)*29
-	var x:float=lerpf(-95,-20,leap)
-	var yarn_x:float=lerpf(110,43,smoothstep(0,1.2,age))
-	var caught:=age>=1.65
-	yarn(Vector2(yarn_x,57),age*3 if not caught else 0)
-	var origin:=Vector2(x,-bounce)
-	# Curled tail; separate from body so the jump has a swinging silhouette.
-	var tail:Array=[]
-	for i in range(22):
-		var t:float=i/21.0
-		tail.append(origin+Vector2(-38-34*sin(t*PI*0.85),39-63*t+sin(age*6)*t*5))
-	line(tail,Color("b57340"),17)
-	line(tail,Color("e6ac69"),11)
-	oval(origin+Vector2(0,39),Vector2(44,34),Color("e9ad69"))
-	oval(origin+Vector2(9,46),Vector2(26,24),Color("fff0d3"))
-	oval(origin+Vector2(-22,65),Vector2(17,9),Color("f5c68a"))
-	var paw:=origin+Vector2(lerpf(25,64,leap),lerpf(43,57,leap))
-	line([origin+Vector2(20,32),paw],Color("d08c4d"),20)
-	oval(paw,Vector2(17,10),Color("f5c68a"))
-	var head:=origin+Vector2(7,-5)
-	draw_colored_polygon(PackedVector2Array([head+Vector2(-35,-13),head+Vector2(-34,-51),head+Vector2(-7,-28)]),Color("e9ad69"))
-	draw_colored_polygon(PackedVector2Array([head+Vector2(9,-29),head+Vector2(39,-48),head+Vector2(39,-9)]),Color("e9ad69"))
-	draw_colored_polygon(PackedVector2Array([head+Vector2(-28,-24),head+Vector2(-28,-41),head+Vector2(-15,-26)]),Color("dc8b89"))
-	draw_colored_polygon(PackedVector2Array([head+Vector2(18,-27),head+Vector2(33,-39),head+Vector2(32,-21)]),Color("dc8b89"))
-	oval(head,Vector2(44,35),Color("f5c68a"))
-	oval(head+Vector2(4,15),Vector2(28,19),Color("fff0d3"))
-	face(head,caught,true)
-	for side in [-1,1]:
-		for i in range(2):draw_line(head+Vector2(side*22,12+i*7),head+Vector2(side*51,8+i*13),Color("a57554"),1.5,true)
-	for i in range(3):draw_line(head+Vector2(-9+i*10,-30),head+Vector2(-7+i*8,-19),Color("bc7d45"),3,true)
-func yarn(at:Vector2,rotation_angle:float)->void:
-	draw_circle(at,23,Color("bd5389"))
-	draw_circle(at+Vector2(-2,-2),20,Color("e98cbd"))
-	for i in range(5):
-		var offset:float=-12+i*6
-		draw_arc(at+Vector2(offset*0.3,0),16+absf(offset)*0.25,rotation_angle+0.3,rotation_angle+2.7,24,Color("f6bfd9"),1.5,true)
-	line([at+Vector2(20,4),at+Vector2(33,9),at+Vector2(38,20),at+Vector2(58,21)],Color("e98cbd"),2)
-func face(at:Vector2,happy:bool,cat:bool)->void:
-	var ink:=Color("302d3b")
-	for x in [-14,17]:
-		if happy:draw_arc(at+Vector2(x,3),6,PI,TAU,16,ink,2.5,true)
-		else:
-			oval(at+Vector2(x,0),Vector2(4.5,7),ink)
-			draw_circle(at+Vector2(x+1,-2),1.6,Color.WHITE)
-	oval(at+Vector2(2,10),Vector2(5 if cat else 9,4 if cat else 6),Color("d88688") if cat else ink)
-	draw_arc(at+Vector2(2,14),7,0.1,PI-0.1,18,ink,1.8,true)
-	oval(at+Vector2(-25,13),Vector2(7,4),Color("e9a29b"))
-	oval(at+Vector2(28,13),Vector2(7,4),Color("e9a29b"))
-func dog_story(age:float)->void:
-	var approach:=smoothstep(0.35,1.65,age)
-	var caught:=age>=1.65
-	var bob:=sin(age*12)*(1-approach)*4
-	var origin:=Vector2(lerpf(-80,-10,approach),bob)
-	var wag:=sin(age*17)*13
-	line([origin+Vector2(-36,40),origin+Vector2(-66,17+wag)],Color("a76a49"),13)
-	oval(origin+Vector2(-5,41),Vector2(45,30),Color("bc8258"))
-	oval(origin+Vector2(6,46),Vector2(25,21),Color("f8e5c6"))
-	for x in [-28,24]:oval(origin+Vector2(x,65),Vector2(16,10),Color("daab7b"))
-	var head:=origin+Vector2(13,-7)
-	oval(head+Vector2(-37,-1+sin(age*7)*3),Vector2(15,33),Color("80563e"))
-	oval(head+Vector2(39,-1+sin(age*7+1)*3),Vector2(15,33),Color("80563e"))
-	oval(head,Vector2(43,37),Color("dbae7e"))
-	oval(head+Vector2(1,17),Vector2(29,22),Color("f8e5c6"))
-	face(head,caught,false)
-	if caught:
-		var chew:=sin(age*18)*2
-		oval(head+Vector2(3,25+chew),Vector2(7,5),Color("e8989a"))
-	else:
-		var food:=Vector2(lerpf(119,23,approach),lerpf(42,16,approach))
-		ham(food,lerpf(-0.25,-0.6,approach))
-		if age<1.25:
-			for i in range(3):draw_arc(Vector2(110+i*10,13-i*9),8,-1.8,0.4,16,Color("eed09e"),1.5,true)
-func ham(at:Vector2,angle:float)->void:
-	var direction:=Vector2(cos(angle),sin(angle))
-	var tip:=at+direction*33
-	draw_line(at,tip,Color("f8ead4"),10,true)
-	draw_circle(tip+Vector2(-2,-5),7,Color("fff5e2"))
-	draw_circle(tip+Vector2(4,4),7,Color("fff5e2"))
-	oval(at,Vector2(27,19),Color("a9584a"))
-	oval(at+Vector2(-4,-2),Vector2(20,14),Color("de8a73"))
-	draw_arc(at,19,3.3,5.0,20,Color("efb298"),3,true)
-func treasure_story(age:float)->void:
-	var lift:=smoothstep(0.4,1.6,age)
-	var base:=Rect2(-68,4,136,65)
-	draw_rect(base,Color("ad7745"))
-	draw_rect(Rect2(-68,4,136,12),Color("efd18b"))
-	for x in [-50,40]:draw_rect(Rect2(x,4,10,65),Color("efd18b"))
-	draw_rect(Rect2(-68,-4-lift*30,136,18),Color("d3a15a"))
-	for i in range(9):
-		var at:=Vector2(-45+(i%3)*44,-10-lift*(30+(i/3)*25))
-		draw_circle(at,14,Color("e8b752"))
-		draw_arc(at,10,0,TAU,24,Color("ffe7a0"),2,true)
+
+func _draw_glass_card(alpha: float) -> void :
+	var rect: = Rect2(-196, -165, 392, 372)
+
+	for i in range(4, 0, -1):
+		var shadow: = StyleBoxFlat.new()
+		shadow.bg_color = Color(0.0, 0.005, 0.015, 0.035 * alpha)
+		shadow.set_corner_radius_all(22 + i * 2)
+		var shadow_rect: = rect.grow(float(i) * 3.0)
+		shadow_rect.position.y += 5.0
+		draw_style_box(shadow, shadow_rect)
+	var outer: = StyleBoxFlat.new()
+	outer.bg_color = Color(0.035, 0.067, 0.098, 0.96 * alpha)
+	outer.border_color = Color(_accent, 0.66 * alpha)
+	outer.set_border_width_all(1)
+	outer.set_corner_radius_all(20)
+	draw_style_box(outer, rect)
+	var inset: = StyleBoxFlat.new()
+	inset.bg_color = Color(0.06, 0.11, 0.15, 0.4 * alpha)
+	inset.border_color = Color(0.58, 0.75, 0.79, 0.16 * alpha)
+	inset.set_border_width_all(1)
+	inset.set_corner_radius_all(16)
+	draw_style_box(inset, rect.grow(-6))
+
+	draw_polygon(PackedVector2Array([Vector2(-181, -144), Vector2(-74, -158), Vector2(137, -158), Vector2(-181, -59)]), PackedColorArray([Color(0.58, 0.78, 0.83, 0.012 * alpha), Color(0.58, 0.78, 0.83, 0.035 * alpha), Color(0.58, 0.78, 0.83, 0.0), Color(0.58, 0.78, 0.83, 0.0)]))
+	for side in [-1, 1]:
+		var color: = Color(_accent, 0.58 * alpha)
+		draw_line(Vector2(side * 169, -133), Vector2(side * 169, -102), color, 1, true)
+		draw_line(Vector2(side * 169, -133), Vector2(side * 146, -133), color, 1, true)
+		draw_circle(Vector2(side * 170, 181), 1.4, Color(_accent, 0.5 * alpha))
+
+func _draw_dial(origin: Vector2, age: float, alpha: float, reveal: float) -> void :
+	var charge: = smoothstep(0.08, 0.89, age)
+	var radius: = 52.0 + sin(age * 1.6) * 1.2
+	draw_arc(origin, radius, 0, TAU, 80, Color(_accent, 0.22 * alpha), 1, true)
+	draw_arc(origin, radius, - PI / 2, - PI / 2 + TAU * maxf(0.001, charge), 80, Color(_accent, 0.83 * alpha), 1.5, true)
+	for i in range(32):
+		var a: = float(i) * TAU / 32.0 - PI / 2
+		var direction: = Vector2(cos(a), sin(a))
+		var lit: = float(i) / 32.0 <= charge
+		var color: = Color(_accent, (0.65 if lit else 0.12) * alpha)
+		draw_line(origin + direction * 59, origin + direction * (63 if i % 4 == 0 else 61), color, 1, true)
+	if _tier >= 1:
+		for side in [-1, 1]:
+			var a: = float(side) * PI / 2 + age * 0.28
+			draw_arc(origin, 70, a, a + 1.02, 24, Color(_secondary, 0.64 * alpha * reveal), 1.4, true)
+	if _tier >= 2:
+		for i in range(4):
+			var a: = float(i) * PI / 2 - age * 0.15
+			draw_arc(origin, 79, a, a + 0.62, 18, Color(_accent, 0.39 * alpha * reveal), 1, true)
+	if _tier == 3:
+		for side in [-1, 1]:
+
+			for i in range(4):
+				var x: = 94.0 + float(i) * 10.0
+				var h: = 22.0 - float(i) * 4.0
+				draw_line(origin + Vector2(side * x, - h), origin + Vector2(side * x, h), Color(_accent, (0.7 - i * 0.12) * alpha * reveal), 2, true)
+
+func _draw_light_fan(origin: Vector2, age: float, alpha: float) -> void :
+	var flare: = smoothstep(0.61, 0.89, age) * (1.0 - smoothstep(1.08, 1.7, age))
+	var count: = 8 if _tier == 2 else 12
+	for i in range(count):
+		var angle: = float(i) * TAU / count + age * 0.035
+		var reach: = 119.0 if i % 2 == 0 else 94.0
+		var half_width: = 0.035 if _tier == 2 else 0.055
+		var vertices: = PackedVector2Array([origin + Vector2(cos(angle - half_width), sin(angle - half_width)) * 45, origin + Vector2(cos(angle - half_width), sin(angle - half_width)) * reach, origin + Vector2(cos(angle + half_width), sin(angle + half_width)) * reach, origin + Vector2(cos(angle + half_width), sin(angle + half_width)) * 45])
+		var bright: = Color(_accent, alpha * (0.025 + flare * 0.12))
+		var clear: = Color(_accent, 0)
+		draw_polygon(vertices, PackedColorArray([bright, clear, clear, bright]))
+
+	var burst: = clampf((age - 0.69) / 0.83, 0, 1)
+	if burst > 0 and burst < 1:
+		draw_arc(origin, 42 + burst * 87, 0, TAU, 100, Color(_accent, (1 - burst) * 0.45 * alpha), 1.3, true)
+
+func _draw_coin_arcs(origin: Vector2, age: float, alpha: float) -> void :
+	var count: int = [4, 8, 12, 18][_tier]
+	for i in range(count):
+		var delay: = float(i % 6) * 0.055
+		var t: = (age - 0.8 - delay) / 1.85
+		if t <= 0 or t >= 1: continue
+		var side: = -1.0 if i % 2 == 0 else 1.0
+		var lane: = float(i / 2) / maxf(1.0, float(count / 2 - 1))
+		var velocity: = Vector2(side * (82 + lane * 67), -110 - lane * 94)
+		var at: = origin + velocity * t + Vector2(0, 175 * t * t)
+		var visibility: = smoothstep(0, 0.1, t) * (1 - smoothstep(0.6, 1.0, t)) * alpha
+		var squash: = 0.26 + absf(cos(t * 8.0 + float(i) * 0.71)) * 0.74
+		_draw_coin(at, 5.0 + float(i % 3) * 1.0, squash, visibility, t * 6 + float(i), false)
+
+func _draw_sparks(origin: Vector2, age: float, alpha: float) -> void :
+	var t: = age - 0.73
+	if t <= 0: return
+	var count: int = [6, 10, 14, 20][_tier]
+	for i in range(count):
+		var a: = float(i) * 2.399963
+		var pace: = 13.0 + float(i % 5) * 4.2
+		var at: = origin + Vector2(cos(a), sin(a)) * (66.0 + t * pace) + Vector2(0, t * t * 5.5)
+		var fade: = (1.0 - smoothstep(0.8, 2.35, t)) * smoothstep(0, 0.18, t) * alpha
+		var pulse: = 0.48 + 0.52 * absf(sin(t * 2.8 + float(i)))
+		var color: = Color(_secondary if i % 3 == 0 else _accent, fade * pulse * 0.72)
+		var radius: = 1.2 if i % 3 else 2.4
+		draw_line(at - Vector2(radius, 0), at + Vector2(radius, 0), color, 1, true)
+		if i % 3 == 0: draw_line(at - Vector2(0, radius), at + Vector2(0, radius), color, 1, true)
+
+func _draw_coin(at: Vector2, radius: float, squash: float, alpha: float, turn: float, hero: bool) -> void :
+	var rim: = Color("9c793e")
+	var face: = Color("e9c97f")
+	var highlight: = Color("fff0bb")
+	var shade: = Color("846138")
+	rim.a = alpha
+	face.a = alpha
+	highlight.a = alpha
+	shade.a = alpha
+	_oval(at + Vector2(0, radius * 0.11), Vector2(radius * squash, radius), Color(0.01, 0.02, 0.03, 0.35 * alpha))
+	_oval(at + Vector2(radius * 0.025, radius * 0.035), Vector2(radius * squash, radius), rim)
+	_oval(at - Vector2(0, radius * 0.035), Vector2(radius * 0.93 * squash, radius * 0.93), face)
+	var ring: = PackedVector2Array()
+	for i in range(49):
+		var a: = float(i) * TAU / 48
+		ring.append(at + Vector2(cos(a) * squash, sin(a)) * radius * 0.79)
+	draw_polyline(ring, Color(shade, 0.68 * alpha), 1.0 if hero else 0.65, true)
+	if hero:
+		for i in range(36):
+			var a: = float(i) * TAU / 36
+			var direction: = Vector2(cos(a) * squash, sin(a))
+			draw_line(at + direction * radius * 0.85, at + direction * radius * 0.91, Color(shade, 0.61 * alpha), 1, true)
+		var sheen: = PackedVector2Array()
+		for i in range(25):
+			var a: = PI + float(i) * PI / 24
+			sheen.append(at + Vector2(cos(a) * squash, sin(a)) * radius * 0.95)
+		draw_polyline(sheen, Color(highlight, 0.83 * alpha), 1.5, true)
+	var star: = PackedVector2Array()
+	for i in range(10):
+		var a: = - PI / 2 + float(i) * PI / 5 + (0.02 * sin(turn) if hero else 0.0)
+		var distance: = radius * (0.49 if i % 2 == 0 else 0.23)
+		star.append(at + Vector2(cos(a) * squash, sin(a)) * distance)
+	draw_colored_polygon(star, shade)
+	if hero:
+		var inset_star: = PackedVector2Array()
+		for point in star: inset_star.append(at + (point - at) * 0.88 - Vector2(0, 0.8))
+		draw_colored_polygon(inset_star, Color("c49c56") * Color(1, 1, 1, alpha))
+
+func _oval(at: Vector2, radius: Vector2, color: Color) -> void :
+	var points: = PackedVector2Array()
+	for i in range(48):
+		var a: = float(i) * TAU / 48
+		points.append(at + Vector2(cos(a) * radius.x, sin(a) * radius.y))
+	draw_colored_polygon(points, color)
 
 func screen_shake() -> Vector2:
-	if clock<=0 or amount not in [2888,2999]:return Vector2.ZERO
-	var age:=DURATION-clock
-	var power:float=7.0*smoothstep(0.05,0.35,age)*(1.0-smoothstep(2.1,2.8,age))
-	return Vector2(sin(age*73)+sin(age*121)*0.3,cos(age*89))*power
+	if clock <= 0 or amount < 2888: return Vector2.ZERO
+	var age: = DURATION - clock
+	var impact: = smoothstep(0.66, 0.84, age) * (1.0 - smoothstep(0.94, 1.28, age))
+	var amplitude: = 1.25 if amount < 10000 else 2.0
+	return Vector2(sin(age * 57), cos(age * 71) * 0.65) * amplitude * impact
 
-func coin_icon(at:Vector2,radius:float)->void:
-	draw_circle(at,radius,Color("c99736"))
-	draw_circle(at+Vector2(-1,-1),radius-2,Color("f5ce68"))
-	draw_arc(at,radius-4,0,TAU,24,Color("fff1a9"),1.2,true)
-	var star:=PackedVector2Array()
-	for i in range(10):
-		var a:float=-PI/2+i*PI/5
-		star.append(at+Vector2(cos(a),sin(a))*radius*(0.48 if i%2==0 else 0.22))
-	draw_colored_polygon(star,Color("ae7d2c"))
-
-func cart_story(age:float)->void:
-	var arrival:=smoothstep(0.1,1.1,age)
-	var x:float=lerpf(-230,0,arrival)
-	var shake:=sin(age*70)*3
-	var boom:=maxf(0,age-1.65)
-	var floor_y:=68.0
-	# Tracks tremble and crack before the cart bursts.
-	line([Vector2(-173,floor_y+5),Vector2(173,floor_y+5)],Color("a5b8c2"),4)
-	line([Vector2(-173,floor_y+17),Vector2(173,floor_y+17)],Color("748d9e"),3)
-	for i in range(9):draw_line(Vector2(-161+i*40,floor_y),Vector2(-155+i*40,floor_y+20),Color("748d9e"),4,true)
-	if boom<=0:
-		for side in [-1,1]:
-			var wheel:=Vector2(x+side*51,57+shake)
-			draw_circle(wheel,17,Color("263246"))
-			draw_circle(wheel,12,Color("9bb1bc"))
-			draw_circle(wheel,5,Color("e5d7b0"))
-			var spoke:=Vector2(cos(age*10),sin(age*10))*11
-			draw_line(wheel-spoke,wheel+spoke,Color("34445b"),3,true)
-		var hull:=PackedVector2Array([Vector2(x-76,-11+shake),Vector2(x+76,-11+shake),Vector2(x+62,45+shake),Vector2(x-62,45+shake)])
-		draw_colored_polygon(hull,Color("956741"))
-		for y in [4,22,40]:draw_line(Vector2(x-64,y+shake),Vector2(x+64,y+shake),Color("d3a876"),4,true)
-		for side in [-1,1]:draw_line(Vector2(x+side*57,-9+shake),Vector2(x+side*49,43+shake),Color("9fb0b7"),7,true)
-		for row in range(3):
-			for col in range(5-row):coin_icon(Vector2(x-51+col*26+row*13,-18-row*20+shake),14)
-		draw_line(Vector2(x-80,-9+shake),Vector2(x+80,-9+shake),Color("e7c28a"),8,true)
-	else:
-		var flash:=PackedVector2Array()
-		for i in range(24):
-			var a:float=i*TAU/24
-			flash.append(Vector2(cos(a),sin(a))*(70+boom*35)*(1.0 if i%2==0 else 0.66)+Vector2(0,-15))
-		var glow:=Color("ffda73")
-		glow.a=maxf(0,1-boom/1.3)
-		draw_colored_polygon(flash,glow)
-		for side in [-1,1]:
-			var p:=Vector2(side*(48+boom*45),25+boom*19)
-			draw_colored_polygon(PackedVector2Array([p+Vector2(-29,-16),p+Vector2(27,-20),p+Vector2(20,17),p+Vector2(-25,14)]),Color("b48555"))
-			draw_circle(p+Vector2(side*14,24),15,Color("657988"))
-		for i in range(19):
-			var a:float=-PI+0.20+i*2.75/18
-			var speed:float=45+(i%5)*19
-			var p:=Vector2(cos(a)*speed*boom,sin(a)*speed*boom+35*boom*boom-12)
-			coin_icon(p,10+i%3)
-
-func vault_story(age:float)->void:
-	var opening:=smoothstep(0.45,1.65,age)
-	var frame:=StyleBoxFlat.new()
-	frame.bg_color=Color("aa7945")
-	frame.border_color=Color("f4d492")
-	frame.set_border_width_all(8)
-	frame.set_corner_radius_all(10)
-	draw_style_box(frame,Rect2(-84,-74,168,144))
-	draw_rect(Rect2(-69,-59,138,118),Color("17263f"))
-	for side in [-1,1]:
-		var outer:float=side*72
-		var inner:float=side*(4+opening*65)
-		var door:=PackedVector2Array([Vector2(outer,-60),Vector2(inner,-60+opening*10),Vector2(inner,59-opening*8),Vector2(outer,59)])
-		draw_colored_polygon(door,Color("d0a05c"))
-		draw_polyline(door+PackedVector2Array([door[0]]),Color("f9e0a0"),3,true)
-	if opening>0.4:
-		for i in range(22):
-			var t:float=fmod(age*0.7+i*0.137,1.0)
-			var spread:float=(i%7-3)*12
-			var at:=Vector2(spread*(0.3+t),35-sin(t*PI)*122)
-			coin_icon(at,9+i%3)
-	for i in range(8):
-		var a:float=i*TAU/8+age*0.1
-		var p:=Vector2(cos(a)*132,sin(a)*85)
-		draw_line(p-Vector2(0,5),p+Vector2(0,5),Color("ffe6a1"),2,true)
-		draw_line(p-Vector2(5,0),p+Vector2(5,0),Color("ffe6a1"),2,true)
+func _ease_out(t: float) -> float:
+	return 1.0 - pow(1.0 - t, 3)
