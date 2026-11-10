@@ -34,9 +34,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select Xcode 26 or later
         run: |
-          xcode=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -1)
-          test -n "$xcode"
-          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcode=$(find /Applications -maxdepth 1 -name 'Xcode_2*.app' | sort -V | tail -1)
+          if [ -n "$xcode" ]; then sudo xcode-select -s "$xcode/Contents/Developer"; fi
+          test -n "$(xcode-select -p)"
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
       - name: Install official matching Godot
