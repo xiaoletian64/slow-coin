@@ -38,6 +38,7 @@ signal test_requested
 signal help_requested
 
 const Reel = preload("res://scripts/slot_reel.gd")
+const I18n = preload("res://scripts/i18n.gd")
 const Badge = preload("res://scripts/coin_badge.gd")
 const CREAM: = Color("f9ebcd")
 const MUTED: = Color("baa8c8")
@@ -133,9 +134,9 @@ func build() -> void :
 	badge.position = Vector2(0, 6)
 	badge.size = Vector2(33, 33)
 	header.add_child(badge)
-	var title: = label(header, "拾光币社", 21)
+	var title: = label(header, I18n.app_title(), 21)
 	title.position = Vector2(42, 1)
-	player_title = label(header, "初来乍到", 10, GOLD)
+	player_title = label(header, I18n.title_name(0), 10, GOLD)
 	player_title.position = Vector2(43, 29)
 	var pause: = button(header, "Ⅱ", func(): pause_requested.emit())
 	pause.name = "Pause"
@@ -144,27 +145,27 @@ func build() -> void :
 	wallet_panel = Panel.new()
 	wallet_panel.add_theme_stylebox_override("panel", panel_style("261a39", 18, "855277"))
 	add_child(wallet_panel)
-	label(wallet_panel, "我的金币", 12, MUTED).position = Vector2(18, 11)
+	label(wallet_panel, I18n.my_coins(), 12, MUTED).position = Vector2(18, 11)
 	balance_label = label(wallet_panel, "1,500", 26)
 	balance_label.position = Vector2(17, 29)
-	daily_label = label(wallet_panel, "+500 / 日", 9, Color("9bdcc7"))
+	daily_label = label(wallet_panel, I18n.daily_tag(), 9, Color("9bdcc7"))
 	daily_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	daily_label.position.y = 18
-	var saved: = label(wallet_panel, "自动保存 · 放心离开", 11, MUTED)
+	var saved: = label(wallet_panel, I18n.autosave_hint(), 11, MUTED)
 	saved.name = "Saved"
 	saved.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	saved.position.y = 46
-	stage_label = button(self, "经典双层  ▾", func(): mechanism_requested.emit())
+	stage_label = button(self, I18n.stage_default(), func(): mechanism_requested.emit())
 	stage_label.add_theme_font_size_override("font_size", 12)
-	voice_button = button(self, "口令补给 · 语音/输入", func(): voice_requested.emit())
+	voice_button = button(self, I18n.voice_button_label(), func(): voice_requested.emit())
 	voice_button.add_theme_font_size_override("font_size", 11)
-	rhythm = label(self, "●  自由节奏", 11, Color("91d0bb"))
+	rhythm = label(self, I18n.free_rhythm(), 11, Color("91d0bb"))
 	rhythm.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	slot_panel = Panel.new()
 	slot_panel.add_theme_stylebox_override("panel", panel_style("27142e", 13, "d29268"))
 	add_child(slot_panel)
 	label(slot_panel, "JACKPOT", 14, GOLD).position = Vector2(12, 12)
-	label(slot_panel, "三同连线奖", 12, Color("eebada")).position = Vector2(13, 37)
+	label(slot_panel, I18n.triple_bonus(), 12, Color("eebada")).position = Vector2(13, 37)
 	for i in range(3):
 		var frame: = Panel.new()
 		frame.position = Vector2(106 + i * 56, 9)
@@ -176,7 +177,7 @@ func build() -> void :
 		reel.clip_contents = true
 		frame.add_child(reel)
 		slot_labels.append(reel)
-	slot_status = label(slot_panel, "穿过移动靶抽奖", 10, MUTED)
+	slot_status = label(slot_panel, I18n.slot_idle_hint(), 10, MUTED)
 	slot_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	slot_status.position = Vector2(282, 19)
 	slot_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -192,7 +193,7 @@ func build() -> void :
 	compact_slot_status = label(self, "", 11, GOLD)
 	compact_slot_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	compact_slot_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	settlement_button = button(self, "轮盘结算待出金币", func(): settlement_requested.emit(), true)
+	settlement_button = button(self, I18n.settle_button_label(), func(): settlement_requested.emit(), true)
 	settlement_button.add_theme_font_size_override("font_size", 11)
 	award_status = label(self, "", 12, GOLD)
 	award_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -208,12 +209,12 @@ func build() -> void :
 	footer = Panel.new()
 	footer.add_theme_stylebox_override("panel", panel_style("21162f", 23, "925585"))
 	add_child(footer)
-	label(footer, "自动摆杆", 11, MUTED).position = Vector2(17, 15)
-	aim_button = button(footer, "Ⅱ  停在这里", func(): aim_requested.emit())
+	label(footer, I18n.auto_swing(), 11, MUTED).position = Vector2(17, 15)
+	aim_button = button(footer, I18n.aim_hold(), func(): aim_requested.emit())
 	aim_button.position = Vector2(92, 8)
 	aim_button.size = Vector2(160, 32)
 	aim_button.add_theme_font_size_override("font_size", 13)
-	pool_label = label(footer, "前口落币计奖", 11, MUTED)
+	pool_label = label(footer, I18n.front_pays(), 11, MUTED)
 	pool_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	pool_label.position.y = 16
 	progress_bar = ProgressBar.new()
@@ -223,20 +224,20 @@ func build() -> void :
 	progress_bar.add_theme_stylebox_override("background", panel_style("263e48", 3))
 	progress_bar.add_theme_stylebox_override("fill", panel_style("89cdb7", 3))
 	footer.add_child(progress_bar)
-	drop_button = button(footer, "投  一  枚     ↓", func(): pass, true)
+	drop_button = button(footer, I18n.drop_one(), func(): pass, true)
 	drop_button.add_theme_font_size_override("font_size", 23)
 	drop_button.button_down.connect( func(): drop_requested.emit())
 	drop_button.position = Vector2(15, 56)
-	var cost: = label(footer, "点按投一枚 · 长按连续投币", 11, Color("93aeb7"))
+	var cost: = label(footer, I18n.tap_or_hold(), 11, Color("93aeb7"))
 	cost.name = "Cost"
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cost.position.y = 128
-	var collection: = button(footer, "◇ 收藏 / 挑战", func(): collection_requested.emit())
+	var collection: = button(footer, I18n.collection_button(), func(): collection_requested.emit())
 	collection.name = "Collection"
-	practice_button = button(footer, "∞  练习台", func(): mode_requested.emit())
-	var shop: = button(footer, "◈ 换皮肤", func(): shop_requested.emit())
+	practice_button = button(footer, I18n.practice_button(), func(): mode_requested.emit())
+	var shop: = button(footer, I18n.skins_button(), func(): shop_requested.emit())
 	shop.name = "Shop"
-	var help: = button(footer, "?  怎么玩", func(): help_requested.emit())
+	var help: = button(footer, I18n.help_button(), func(): help_requested.emit())
 	help.name = "Help"
 	collection_label = label(self, "", 11, MUTED)
 	collection_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -326,22 +327,22 @@ func layout() -> void :
 	payout_label.size = Vector2(width, 40)
 
 func update_aim(locked: bool) -> void :
-	aim_button.text = "↔  继续摆动" if locked else "Ⅱ  停在这里"
+	aim_button.text = I18n.aim_resume() if locked else I18n.aim_hold()
 	aim_button.add_theme_stylebox_override("normal", panel_style("42625f" if locked else "281d3c", 10, "8ac4b2" if locked else "594069"))
 
 func update_state(wallet, practice: bool, queued: int, _capacity: int, mechanism: = "classic") -> void :
-	player_title.text = "称号 · " + wallet.title_name()
+	player_title.text = I18n.title_prefix() + wallet.title_name()
 	balance_label.text = format_number(wallet.balance)
-	stage_label.text = ("练习 · " if practice else "") + {"classic": "经典双层", "split": "交错双推板", "sweep": "扫杆联动"}[mechanism] + " ▾"
-	practice_button.text = "↩  正式台" if practice else "∞  练习台"
-	footer.get_node("Cost").text = "无限免费投币 · 不计金币与收藏" if practice else "点按投一枚 · 长按连续投币"
-	pool_label.text = "练习模式" if practice else "前口落币计奖"
+	stage_label.text = (I18n.practice_prefix() if practice else "") + I18n.stage_name(mechanism) + " ▾"
+	practice_button.text = I18n.main_table_button() if practice else I18n.practice_button()
+	footer.get_node("Cost").text = I18n.free_play_hint() if practice else I18n.tap_or_hold()
+	pool_label.text = I18n.practice_mode() if practice else I18n.front_pays()
 	progress_bar.value = 0 if practice else wallet.side_progress
-	collection_label.text = "无内购  ·  自动保存  ·  随时歇一会儿"
-	count_label.text = "逐枚出币中 · 等待 %d 枚" % queued if queued > 0 else "摆杆自动游走，也可以停在喜欢的位置"
+	collection_label.text = I18n.footer_tagline()
+	count_label.text = I18n.dispensing_wait(queued) if queued > 0 else I18n.swing_hint()
 	drop_button.disabled = ( not practice and wallet.balance < 1)
 	if not practice and wallet.balance < 1:
-		count_label.text = "金币用完啦，去免费练习台继续玩"
+		count_label.text = I18n.broke_practice_hint()
 
 static func format_number(value: int) -> String:
 	var raw: = str(value)
@@ -409,51 +410,51 @@ func show_pause(sound: bool, haptic: bool, music: = true) -> void :
 	active_music = music
 	active_sound = sound
 	active_haptic = haptic
-	var content: = sheet("歇一会儿", "台面已经暂停，金币和进度都已保存。")
-	var music_button: = button(content, "背景音乐：" + ("开启" if music else "关闭"), func():
+	var content: = sheet(I18n.pause_title(), I18n.pause_subtitle())
+	var music_button: = button(content, I18n.music_label() + I18n.on_off(music), func():
 		active_music = not active_music
 		settings_changed.emit(active_sound, active_haptic, active_music)
 		show_pause(active_sound, active_haptic, active_music))
 	music_button.custom_minimum_size.y = 46
-	var sound_button: = button(content, "游戏音效：" + ("开启" if sound else "关闭"), func():
+	var sound_button: = button(content, I18n.sound_label() + I18n.on_off(sound), func():
 		active_sound = not active_sound
 		settings_changed.emit(active_sound, active_haptic, active_music)
 		show_pause(active_sound, active_haptic, active_music))
 	sound_button.custom_minimum_size.y = 46
-	var haptic_button: = button(content, "触感：" + ("开启" if haptic else "关闭"), func():
+	var haptic_button: = button(content, I18n.haptic_label() + I18n.on_off(haptic), func():
 		active_haptic = not active_haptic
 		settings_changed.emit(active_sound, active_haptic, active_music)
 		show_pause(active_sound, active_haptic, active_music))
 	haptic_button.custom_minimum_size.y = 46
-	var clear_button: = button(content, "摇一摇 · 只震落上方卡币", func(): clear_requested.emit())
+	var clear_button: = button(content, I18n.shake_clear_button(), func(): clear_requested.emit())
 	clear_button.custom_minimum_size.y = 46
-	var test_button: = button(content, "测试：必进中间洞 · " + ("开启" if test_enabled else "关闭"), func(): test_requested.emit())
+	var test_button: = button(content, I18n.test_target_button() + I18n.on_off(test_enabled), func(): test_requested.emit())
 	test_button.custom_minimum_size.y = 46
-	var tower_test: = button(content, "测试：金币塔 · 练习台", func(): tower_test_requested.emit())
+	var tower_test: = button(content, I18n.test_tower_button(), func(): tower_test_requested.emit())
 	tower_test.custom_minimum_size.y = 40
-	button(content, "重开一局 · 金币保留", func(): restart_requested.emit()).custom_minimum_size.y = 40
+	button(content, I18n.restart_keep_button(), func(): restart_requested.emit()).custom_minimum_size.y = 40
 	if OS.get_name() == "Android":
-		button(content, "版本更新 · " + preload("res://scripts/app_update.gd").VERSION_NAME, func(): update_requested.emit()).custom_minimum_size.y = 40
-	var resume: = button(content, "继续推金币", func(): resume_requested.emit(), true)
+		button(content, I18n.update_menu_button() + preload("res://scripts/app_update.gd").VERSION_NAME, func(): update_requested.emit()).custom_minimum_size.y = 40
+	var resume: = button(content, I18n.resume_button(), func(): resume_requested.emit(), true)
 	resume.custom_minimum_size.y = 56
-	label(content, "随时离开，不会错过任何限时奖励。", 12, MUTED)
+	label(content, I18n.leave_note(), 12, MUTED)
 
 func show_help() -> void :
-	var content: = sheet("一枚一枚，慢慢来", "经典推币机 · 玩法与金币规则")
+	var content: = sheet(I18n.help_title(), I18n.help_subtitle())
 	var scroll: = ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, minf(410, size.y - 320))
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	content.add_child(scroll)
-	var body: = label(scroll, "① 双导杆自动左右摆动，币沿两杆之间下滑。\n    点「停在这里」固定，随时恢复摆动。\n② 点按投一枚，长按连续投币，每枚花费 1 金币。\n③ 推板自动来回，把金币推向前沿。\n\n正面掉落：每枚返还 1 金币。\n侧边掉落：不计奖励。\n新账号获得 1,000 金币，每天首次进入补给 500 金币。\n余额低于 50 时，口令每日最多补给一次 200 金币。\n正式投币每满 50 次解锁一枚纪念章。\n今日挑战：正式投币 100 枚、前口实收 40 枚、驱赶小偷 1 次。\n各获 1 枚永久印章，在收藏册查看；不额外发金币。\n夜行小偷：冷却结束且投满 30 枚后，每次有效投币有 3.5% 概率出现。\n5 秒内点击驱赶 3 次，失败偷走出现时钱包的 3%，最多 150 枚。\n余额不足 100 不触发；触发后有 90 秒冷却。\n暂停、离线、练习和中奖演出期间不计偷币倒计时。\n连续登录 3 天解锁复古街机，10 天解锁未来霓虹。\n中断后连续天数重计，已获皮肤永久保留。\n皇家典藏 100,000 金币，极光幻彩 200,000 金币。\n所有皮肤均可免费预览，金币兑换永久拥有。\n经典小丑·典藏：12,000 金币。\n每次有效投币有 1% 概率触发彩球砸台。\n彩球震散附近金币，前口掉落才到账。\n实体币超过 1,000 枚随机消除 50 枚，不计收益。\n每隔 8～12 分钟且累计有效投币 80 次，出现自然金币塔。\n自然塔每层 5 枚、共 10 层。\n落点被占用会延后，塔币也要推出前口才到账。\n\n投币穿过移动靶启动免费老虎机：\n三横线、两斜线：同图案连成线中奖。\n三樱桃 58（2.9%）· 三铃铛 388（0.09%）\n三星星 2,999（0.0099%）· 三个7 29,999（0.0001%）\n其余 97% 不中奖（本游戏暂定概率）。\n正在中奖或派奖时，连抽降为 0.5%：\n58 枚 0.49%，388 枚 0.01%，不出更大档。\n每轮中奖最多新增连抽 2 次，连中也不重置。\n此前累计的待抽次数和待出金币保留。\n每次待抽沿用获得时的概率，轮盘结算同样适用。\n普通奖币从联动短导杆出币口快速落下。\n奖金按枚实际落到推盘，前口推出才到账。\n出币和抽奖同时进行，奖币过靶也可连奖。\n累计待出较多时分批生成 50 枚金币塔。\n累计待出超过 200 枚，演出后提示自选轮盘结算：\n剩余抽奖按原概率算出，再将总待出按 1%～90% 折算到账。\n会结清待出和抽奖机会，钱包及台面币保留。\n\n没有内购或广告。登录奖励自动领取。\n练习台无限投币，不计正式收益。", 13)
+	var body: = label(scroll, I18n.help_body(), 13)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.custom_minimum_size.x = minf(size.x - 86, 384)
-	var done: = button(content, "知道啦，去推金币", func(): resume_requested.emit(), true)
+	var done: = button(content, I18n.help_done_button(), func(): resume_requested.emit(), true)
 	done.custom_minimum_size.y = 52
 
 func show_collection(wallet) -> void :
-	var content: = sheet("慢慢攒的小美好", "永久收藏 · 每投 50 枚，留下一枚纪念章")
-	button(content, "今日挑战 · 收藏印章", func(): challenges_requested.emit()).custom_minimum_size.y = 42
-	button(content, "称号墙 · 每日 / 永久", func(): titles_requested.emit()).custom_minimum_size.y = 42
+	var content: = sheet(I18n.collection_title(), I18n.collection_subtitle())
+	button(content, I18n.daily_goals_button(), func(): challenges_requested.emit()).custom_minimum_size.y = 42
+	button(content, I18n.title_wall_button(), func(): titles_requested.emit()).custom_minimum_size.y = 42
 	var grid: = GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 10)
@@ -469,12 +470,12 @@ func show_collection(wallet) -> void :
 		badge.locked = i >= wallet.unlocked_count()
 		badge.custom_minimum_size = Vector2(80, 75)
 		cell.add_child(badge)
-		var name_label: = label(cell, wallet.COLLECTION_NAMES[i], 13)
+		var name_label: = label(cell, I18n.collection_name(i), 13)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var status: = label(cell, "已收藏" if i < wallet.unlocked_count() else "%d 次投币" % ((i + 1) * 50), 11, MUTED)
+		var status: = label(cell, I18n.collected_tag() if i < wallet.unlocked_count() else I18n.drops_needed((i + 1) * 50), 11, MUTED)
 		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label(content, "已投 %d 枚  ·  已收藏 %d / 6" % [wallet.inserted, wallet.unlocked_count()], 13, Color("a6d6c4"))
-	var done: = button(content, "继续推金币", func(): resume_requested.emit(), true)
+	label(content, I18n.collection_stats(wallet.inserted, wallet.unlocked_count()), 13, Color("a6d6c4"))
+	var done: = button(content, I18n.resume_button(), func(): resume_requested.emit(), true)
 	done.custom_minimum_size.y = 52
 
 func update_slot(bonus, practice: bool, collected: = 0) -> void :
@@ -482,28 +483,28 @@ func update_slot(bonus, practice: bool, collected: = 0) -> void :
 	award_status.visible = collected > 0 or bonus.remaining > 0
 	award_progress.visible = false
 	award_status.size.x = size.x - (184 if settlement_button.visible else 32)
-	award_status.text = "%s %s 枚\n待出 %s 枚 · 推落才到账" % ["本局实收" if not practice else "练习收币", format_number(collected), format_number(bonus.remaining)]
+	award_status.text = I18n.award_status_line(I18n.award_run_label(practice), format_number(collected), format_number(bonus.remaining))
 	for i in range(3):
 		slot_labels[i].rows = bonus.column(i)
 		slot_labels[i].lit = bonus.lit_rows(i)
 		slot_labels[i].set_reel(str(bonus.reels[i]), bonus.spinning, bonus.elapsed, i)
 	var state_text: String
 	if bonus.spinning:
-		state_text = "连抽降档 58 / 388" if bonus.reduced_draw else "抽奖中 · 出币继续"
+		state_text = I18n.reduced_odds_status() if bonus.reduced_draw else I18n.spinning_status()
 	elif bonus.presentation > 0:
-		state_text = "小猫抓毛球" if bonus.reward == 58 else ("小狗吃火腿" if bonus.reward == 388 else "大奖演出中")
+		state_text = I18n.prize_show_name(bonus.reward)
 	elif bonus.remaining > 0:
-		state_text = "派奖中 · 连抽 %d/2" % bonus.chain_used
+		state_text = I18n.paying_chain(bonus.chain_used)
 	else:
-		state_text = "练习 · 命中也抽奖" if practice else "命中移动靶抽奖"
-	slot_status.text = state_text + "\n待抽 %s 次" % format_number(bonus.pending_spins)
+		state_text = I18n.practice_spin_status() if practice else I18n.hit_target_status()
+	slot_status.text = state_text + "\n" + I18n.pending_spins(format_number(bonus.pending_spins))
 	compact_slot_status.text = slot_status.text.replace("\n", " · ") + "\n58 / 388 / 2,999 / 29,999"
 
 func show_shop(wallet) -> void :
-	var content: = sheet("给机台换件新衣", "连续登录或金币兑换 · 永久拥有 · 全部可免费预览")
-	label(content, "可用金币  " + format_number(wallet.balance), 17, GOLD)
-	label(content, "已连续登录 %d 天 · 中断后进度重计，已获皮肤保留" % wallet.login_streak, 11, CREAM)
-	button(content, "定制金币 · 选择自己的图片", func(): coin_design_requested.emit()).custom_minimum_size.y = 40
+	var content: = sheet(I18n.shop_title(), I18n.shop_subtitle())
+	label(content, I18n.coins_available() + format_number(wallet.balance), 17, GOLD)
+	label(content, I18n.login_streak_line(wallet.login_streak), 11, CREAM)
+	button(content, I18n.custom_coin_button(), func(): coin_design_requested.emit()).custom_minimum_size.y = 40
 	var grid: = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 12)
@@ -546,10 +547,10 @@ func show_shop(wallet) -> void :
 			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			picture.size = preview.custom_minimum_size
 			preview.add_child(picture)
-		var try_button: = button(cell, "免费预览", func(): skin_preview_requested.emit(id))
+		var try_button: = button(cell, I18n.preview_button(), func(): skin_preview_requested.emit(id))
 		try_button.custom_minimum_size.y = 28
 		try_button.add_theme_font_size_override("font_size", 11)
-		var name_label: = label(cell, skin.name, 14)
+		var name_label: = label(cell, I18n.skin_name(id), 14)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var owned: bool = wallet.owned_skins.has(id)
 		var equipped: bool = wallet.equipped_skin == id
@@ -558,49 +559,47 @@ func show_shop(wallet) -> void :
 		requirement.custom_minimum_size = Vector2(150, 30)
 		requirement.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var login_locked: bool = not owned and int(skin.get("login_days", 0)) > 0
-		var text: String = "使用中" if equipped else ("换上这款" if owned else format_number(skin.price) + " 金币兑换")
-		if login_locked: text = "继续登录解锁"
+		var text: String = I18n.in_use() if equipped else (I18n.equip_this() if owned else format_number(skin.price) + I18n.coins_to_redeem())
+		if login_locked: text = I18n.login_locked_button()
 		var choose: = button(cell, text, func(): skin_requested.emit(id), not owned)
 		choose.add_theme_font_size_override("font_size", 11)
 		choose.custom_minimum_size.y = 38
 		choose.disabled = equipped or login_locked or ( not owned and wallet.balance < int(skin.price))
-	var done: = button(content, "回到推币台", func(): resume_requested.emit())
+	var done: = button(content, I18n.back_to_table_button(), func(): resume_requested.emit())
 	done.custom_minimum_size.y = 45
 
 func show_voice(message: String, listening: = false) -> void :
-	var content: = sheet("口令补给", message)
+	var content: = sheet(I18n.phrase_bonus_title(), message)
 	var input: = LineEdit.new()
-	input.placeholder_text = "点此输入，或用输入法麦克风说口令"
+	input.placeholder_text = I18n.phrase_input_hint()
 	input.max_length = 40
 	input.custom_minimum_size.y = 48
 	input.add_theme_font_size_override("font_size", 14)
 	input.editable = not listening
 	content.add_child(input)
-	var submit: = button(content, "确认口令 · 领取金币", func():
+	var submit: = button(content, I18n.confirm_phrase_button(), func():
 		if not input.text.strip_edges().is_empty(): phrase_submitted.emit(input.text), true)
 	submit.custom_minimum_size.y = 46
 	submit.disabled = listening
 	input.text_submitted.connect( func(text):
 		if not text.strip_edges().is_empty(): phrase_submitted.emit(text))
-	label(content, "国安是冠军 / 国安永远争第一 / 跟丫死磕\n余额低于 50 时可领 200 金币。\n三个口令共享每日一次额度，次日恢复。", 13, GOLD)
-	var privacy: = label(content, "输入法语音：点键盘上的麦克风，识别后确认领取。\n备用麦克风入口需授权和系统识别服务，不保存录音。", 11, MUTED)
+	label(content, I18n.voice_help(), 13, GOLD)
+	var privacy: = label(content, I18n.voice_privacy_note(), 11, MUTED)
 	privacy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var mic: = button(content, "正在识别…" if listening else "备用：游戏内麦克风", func(): voice_start_requested.emit(), true)
+	var mic: = button(content, I18n.listening_label() if listening else I18n.backup_mic_button(), func(): voice_start_requested.emit(), true)
 	mic.custom_minimum_size.y = 52
 	mic.disabled = listening
-	var back: = button(content, "取消 / 回到机台", func(): resume_requested.emit())
+	var back: = button(content, I18n.cancel_back_button(), func(): resume_requested.emit())
 	back.custom_minimum_size.y = 44
 
 func show_mechanisms(current: String) -> void :
-	var content: = sheet("选一台，换种手感", "三种真实物理机构 · 各自保留台面与进度")
-	var names = {"classic": "经典双层推板", "split": "左右交错双推板", "sweep": "推板 + 摆动扫杆"}
-	var descriptions = {"classic": "整面推板往复，适合观察前沿、精准投币。", "split": "左右推板错峰推进，抓住两侧不同的时机。", "sweep": "前方扫杆来回扫动，与推板一起搅动币堆。"}
-	for id in names:
-		var choose: = button(content, names[id] + ("  ·  当前" if id == current else ""), func(): mechanism_selected.emit(id), id == current)
+	var content: = sheet(I18n.mechanism_title(), I18n.mechanism_subtitle())
+	for id in ["classic", "split", "sweep"]:
+		var choose: = button(content, I18n.mechanism_name(id) + (I18n.current_tag() if id == current else ""), func(): mechanism_selected.emit(id), id == current)
 		choose.custom_minimum_size.y = 49
-		var description: = label(content, descriptions[id], 12, MUTED)
+		var description: = label(content, I18n.mechanism_description(id), 12, MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var back: = button(content, "回到机台", func(): resume_requested.emit())
+	var back: = button(content, I18n.back_machine_button(), func(): resume_requested.emit())
 	back.custom_minimum_size.y = 44
 
 func show_skin_preview(skin_name: String) -> void :
@@ -609,47 +608,47 @@ func show_skin_preview(skin_name: String) -> void :
 	modal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(modal)
 	modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var back: = button(modal, "返回商店 · " + skin_name, func(): skin_preview_closed.emit(), true)
+	var back: = button(modal, I18n.back_shop_prefix() + skin_name, func(): skin_preview_closed.emit(), true)
 	back.position = Vector2(22, size.y - 154 - bottom_inset)
 	back.size = Vector2(size.x - 44, 56)
-	var note: = label(modal, "外观预览 · 台面已暂停 · 不扣金币", 12, CREAM)
+	var note: = label(modal, I18n.preview_note(), 12, CREAM)
 	note.position = Vector2(0, size.y - 90 - bottom_inset)
 	note.size = Vector2(size.x, 30)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func show_settlement(owed: int, chances: int) -> void :
-	var content: = sheet("待出金币 · 一把结算", "累计待出 %s 枚 · 另有 %s 次抽奖\n先按原规则结算剩余抽奖，再随机折算 0.01～0.90 倍" % [format_number(owed), format_number(chances)])
-	label(content, "结果直接到账。待出金币、正在开奖和排队机会全部结清。\n钱包现有金币、台面实体币保留。", 13, CREAM)
-	var start: = button(content, "接受折算 · 全部结算", func(): settlement_confirmed.emit(), true)
+	var content: = sheet(I18n.settle_title(), I18n.settle_subtitle(format_number(owed), format_number(chances)))
+	label(content, I18n.settle_body(), 13, CREAM)
+	var start: = button(content, I18n.settle_accept_button(), func(): settlement_confirmed.emit(), true)
 	start.custom_minimum_size.y = 48
-	button(content, "继续抽奖和出币", func(): resume_requested.emit()).custom_minimum_size.y = 44
+	button(content, I18n.settle_keep_button(), func(): resume_requested.emit()).custom_minimum_size.y = 44
 func show_settlement_result(owed: int, percent: int, received: int) -> void :
-	var content: = sheet("轮盘结算", "已结算待出 %s 枚" % format_number(owed))
+	var content: = sheet(I18n.wheel_title(), I18n.wheel_subtitle(format_number(owed)))
 	var wheel = preload("res://scripts/settlement_wheel.gd").new()
 	wheel.custom_minimum_size = Vector2(260, 240)
 	content.add_child(wheel)
-	var result: = label(content, "轮盘转动中…", 18, GOLD)
+	var result: = label(content, I18n.wheel_spinning(), 18, GOLD)
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var done: = button(content, "回到推币台", func(): resume_requested.emit(), true)
+	var done: = button(content, I18n.back_to_table_button(), func(): resume_requested.emit(), true)
 	done.custom_minimum_size.y = 44
 	wheel.spin(percent)
 	var timer: = get_tree().create_timer(2.9, true)
 	timer.timeout.connect( func():
-		if is_instance_valid(result): result.text = "× %.2f · 已到账 %s 枚" % [percent / 100.0, format_number(received)])
+		if is_instance_valid(result): result.text = I18n.wheel_result(percent, format_number(received)))
 
 func show_restart() -> void :
-	var content: = sheet("重开一局？", "台面金币重新铺设，摆杆和推板回到初始位置。")
-	label(content, "钱包金币、皮肤、定制币面保留。\n未发奖励与抽奖次数继续，尚未落出的付费投币退回。", 13, CREAM)
-	button(content, "确认重开", func(): restart_confirmed.emit(), true).custom_minimum_size.y = 48
-	button(content, "继续当前这局", func(): resume_requested.emit()).custom_minimum_size.y = 44
+	var content: = sheet(I18n.restart_title(), I18n.restart_subtitle())
+	label(content, I18n.restart_body(), 13, CREAM)
+	button(content, I18n.restart_confirm_button(), func(): restart_confirmed.emit(), true).custom_minimum_size.y = 48
+	button(content, I18n.restart_stay_button(), func(): resume_requested.emit()).custom_minimum_size.y = 44
 
 func show_titles(wallet, daily: = true) -> void :
 	wallet.ensure_title_day()
-	var content: = sheet("每日称号" if daily else "永久称号", "当天解锁，当天佩戴 · 次日重置，与登录皮肤进度独立" if daily else "长期累计解锁 · 永久保留")
+	var content: = sheet(I18n.titles_title(daily), I18n.titles_subtitle(daily))
 	var tabs: = HBoxContainer.new()
 	content.add_child(tabs)
-	button(tabs, "每日称号 · 8", func(): show_titles(wallet, true), daily).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button(tabs, "永久称号 · 24", func(): show_titles(wallet, false), not daily).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button(tabs, I18n.daily_titles_tab(), func(): show_titles(wallet, true), daily).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button(tabs, I18n.permanent_titles_tab(), func(): show_titles(wallet, false), not daily).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var scroll: = ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, minf(440, size.y - 310))
 	content.add_child(scroll)
@@ -657,30 +656,29 @@ func show_titles(wallet, daily: = true) -> void :
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 8)
 	scroll.add_child(list)
-	var labels = {"inserted": "正式投币", "collected": "前口实收", "jackpots": "中奖", "best_prize": "单次中奖", "towers": "见到金币塔", "skins": "拥有皮肤", "custom": "定制币面", "restarts": "重开一局", "roulette": "轮盘结算"}
 	var catalog: Array = wallet.DAILY_TITLES if daily else wallet.TITLES
 	for i in range(catalog.size()):
 		var id: int = i + 100 if daily else i
 		var data: Array = catalog[i]
 		var unlocked: bool = wallet.has_title(id)
-		var text: String = ("佩戴中 · " if wallet.equipped_title == id else ("可佩戴 · " if unlocked else "未解锁 · ")) + data[0]
+		var text: String = (I18n.worn_prefix() if wallet.equipped_title == id else (I18n.ready_prefix() if unlocked else I18n.locked_prefix())) + I18n.title_name(id)
 		var item: = button(list, text, func(): title_selected.emit(id), unlocked)
 		item.custom_minimum_size.y = 40
 		item.disabled = not unlocked or wallet.equipped_title == id
-		label(list, "%s %s / %s" % [labels[data[1]], format_number(mini(wallet.title_progress(id), data[2])), format_number(data[2])], 11, MUTED)
-	button(content, "回到推币台", func(): resume_requested.emit()).custom_minimum_size.y = 44
+		label(list, "%s %s / %s" % [I18n.category_label(data[0]), format_number(mini(wallet.title_progress(id), data[1])), format_number(data[1])], 11, MUTED)
+	button(content, I18n.back_to_table_button(), func(): resume_requested.emit()).custom_minimum_size.y = 44
 
 func show_challenges(challenges, thief) -> void :
-	var content: = sheet("今日巡场", "完成挑战收集永久印章 · 不额外发金币")
-	label(content, "%s  ·  收藏印章 %d" % [challenges.rank_name(), challenges.completed_total], 17, GOLD)
-	for rank in challenges.RANKS:
-		if rank[0] > challenges.completed_total:
-			label(content, "再集 %d 枚 → %s" % [rank[0] - challenges.completed_total, rank[1]], 12, MUTED)
+	var content: = sheet(I18n.challenges_title(), I18n.challenges_subtitle())
+	label(content, I18n.rank_stamp_line(challenges.rank_name(), challenges.completed_total), 17, GOLD)
+	for i in range(challenges.RANK_STEPS.size()):
+		if challenges.RANK_STEPS[i] > challenges.completed_total:
+			label(content, I18n.next_rank_line(challenges.RANK_STEPS[i] - challenges.completed_total, I18n.rank_title(i)), 12, MUTED)
 			break
 	for row in challenges.rows():
 		var card: = VBoxContainer.new()
 		content.add_child(card)
-		var heading: = label(card, row.title + ("  ✓ 已完成" if row.completed else ""), 15)
+		var heading: = label(card, I18n.challenge_title(row.kind) + (I18n.completed_tag() if row.completed else ""), 15)
 		heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		heading.custom_minimum_size.x = minf(size.x - 86, 384)
 		var progress: = ProgressBar.new()
@@ -689,33 +687,33 @@ func show_challenges(challenges, thief) -> void :
 		progress.show_percentage = false
 		progress.custom_minimum_size.y = 7
 		card.add_child(progress)
-		label(card, "%d / %d  ·  完成 +1 印章" % [row.progress, row.target], 12, MUTED)
-	label(content, "累计驱赶 %d 次  ·  被偷 %d 枚" % [thief.repelled, thief.stolen_total], 13, MUTED)
-	var note: = label(content, "只有正式台计入挑战。小偷随机出现，不保证每天遇到；次日重置进度，已得印章永久保留。", 12, MUTED)
+		label(card, I18n.stamp_progress(row.progress, row.target), 12, MUTED)
+	label(content, I18n.thief_stats_line(thief.repelled, thief.stolen_total), 13, MUTED)
+	var note: = label(content, I18n.challenges_note(), 12, MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = minf(size.x - 86, 384)
-	button(content, "继续巡场", func(): resume_requested.emit(), true).custom_minimum_size.y = 48
+	button(content, I18n.challenges_resume_button(), func(): resume_requested.emit(), true).custom_minimum_size.y = 48
 
 func show_update(updater) -> void :
-	var content: = sheet("版本更新", "拾光币社 · 当前版本 " + updater.VERSION_NAME)
+	var content: = sheet(I18n.update_title(), I18n.update_subtitle(updater.VERSION_NAME))
 	var status: = label(content, updater.message, 16, GOLD)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.custom_minimum_size.x = minf(size.x - 86, 384)
 	if not updater.release.is_empty() and updater.release.get("newer", false):
-		label(content, "新版 %s · %.1f MB" % [updater.release.version, updater.release.size / 1048576.0], 14)
+		label(content, I18n.new_version_line(updater.release.version, updater.release.size / 1048576.0), 14)
 		var notes: = label(content, updater.release.notes, 13, MUTED)
 		notes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		notes.custom_minimum_size.x = minf(size.x - 86, 384)
-		if updater.state == "available": button(content, "下载更新", updater.download, true).custom_minimum_size.y = 48
-	if updater.state == "ready": button(content, "安装已校验的更新", updater.install, true).custom_minimum_size.y = 48
+		if updater.state == "available": button(content, I18n.download_button(), updater.download, true).custom_minimum_size.y = 48
+	if updater.state == "ready": button(content, I18n.install_button(), updater.install, true).custom_minimum_size.y = 48
 	if updater.state == "downloading":
 		var bar: = ProgressBar.new()
 		bar.value = updater.progress * 100
 		bar.custom_minimum_size.y = 12
 		content.add_child(bar)
 	if updater.state in ["checking", "downloading"]:
-		button(content, "取消", updater.cancel).custom_minimum_size.y = 40
+		button(content, I18n.cancel_button(), updater.cancel).custom_minimum_size.y = 40
 	else:
-		button(content, "重新检查", func(): updater.check()).custom_minimum_size.y = 40
-	button(content, "打开下载页", func(): OS.shell_open(updater.BASE_URL)).custom_minimum_size.y = 40
-	button(content, "返回游戏", func(): resume_requested.emit(), true).custom_minimum_size.y = 48
+		button(content, I18n.recheck_button(), func(): updater.check()).custom_minimum_size.y = 40
+	button(content, I18n.download_page_button(), func(): OS.shell_open(updater.BASE_URL)).custom_minimum_size.y = 40
+	button(content, I18n.back_game_button(), func(): resume_requested.emit(), true).custom_minimum_size.y = 48

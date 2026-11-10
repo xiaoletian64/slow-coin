@@ -200,7 +200,7 @@ func build_machine() -> void :
 	pusher.physics_material_override = pm
 	var mesh: = MeshInstance3D.new()
 	var cube: = BoxMesh.new()
-	cube.size = Vector3(6.0, 0.48, 3.3)
+	cube.size = Vector3(6.0, 0.48, 3.26)
 	mesh.mesh = cube
 	mesh.material_override = material("b59662", 0.65)
 	pusher.add_child(mesh)
@@ -210,7 +210,7 @@ func build_machine() -> void :
 	collider.shape = shape
 	pusher.add_child(collider)
 	box(pusher, Vector3(0, 0.247, 0), Vector3(5.97, 0.014, 3.27), "315660", false, 0.55)
-	box(pusher, Vector3(0, 0.14, 1.66), Vector3(6.0, 0.065, 0.025), "f3ce80", false, 0.65)
+	box(pusher, Vector3(0, 0.14, 1.61), Vector3(6.0, 0.065, 0.025), "f3ce80", false, 0.65)
 	second_pusher = pusher.duplicate() as AnimatableBody3D
 	second_pusher.position = Vector3(1.53, 0.24, -3.45)
 	add_child(second_pusher)

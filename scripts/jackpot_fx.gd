@@ -1,6 +1,6 @@
 extends Control
 
-
+const I18n = preload("res://scripts/i18n.gd")
 const DURATION: = 3.4
 var clock: = 0.0
 var amount: = 0
@@ -67,10 +67,10 @@ func update_layout() -> void :
 	var fade: = smoothstep(0.0, 0.24, age) * (1.0 - smoothstep(2.94, DURATION, age))
 	var reveal: = smoothstep(0.56, 0.91, age)
 	var lift: = 12.0 * (1.0 - arrival) * scene_scale
-	caption.text = ["好 运 嘉 奖", "金 潮 加 赏", "大 奖 时 刻", "至 尊 头 奖"][_tier]
+	caption.text = I18n.jackpot_caption(_tier)
 	reward_label.text = _format_amount(amount)
-	unit_label.text = "枚奖励金币 · 待发放"
-	payout_hint.text = "演出结束后落币，推入前口后计入余额"
+	unit_label.text = I18n.jackpot_unit()
+	payout_hint.text = I18n.jackpot_payout_hint()
 	_place_label(caption, -141.0, 36.0, 19, fade, lift)
 	_place_label(reward_label, 14.0, 92.0, 72 if amount < 10000 else 65, fade * reveal, lift)
 	_place_label(unit_label, 118.0, 26.0, 13, fade * reveal, lift)

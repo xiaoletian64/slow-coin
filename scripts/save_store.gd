@@ -1,5 +1,6 @@
 extends RefCounted
 
+const I18n = preload("res://scripts/i18n.gd")
 var path: String
 var recovered: = false
 var error_message: = ""
@@ -54,21 +55,21 @@ func write(data: Dictionary) -> bool:
 	error_message = ""
 	var temporary: = FileAccess.open(path + ".tmp", FileAccess.WRITE)
 	if temporary == null:
-		error_message = "无法保存，请检查存储空间"
+		error_message = I18n.save_error("open")
 		return false
 	temporary.store_string(JSON.stringify(data))
 	temporary.flush()
 	var result: = temporary.get_error()
 	temporary.close()
 	if result != OK:
-		error_message = "保存未完成，请检查存储空间"
+		error_message = I18n.save_error("write")
 		return false
 
 	if not _read_file(path).is_empty():
 		if DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(path + ".bak")) != OK:
-			error_message = "备份未完成"
+			error_message = I18n.save_error("backup")
 			return false
 	if DirAccess.rename_absolute(ProjectSettings.globalize_path(path + ".tmp"), ProjectSettings.globalize_path(path)) != OK:
-		error_message = "存档写入失败"
+		error_message = I18n.save_error("rename")
 		return false
 	return true

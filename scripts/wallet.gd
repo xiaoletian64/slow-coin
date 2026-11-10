@@ -1,32 +1,32 @@
 extends RefCounted
 
+const I18n = preload("res://scripts/i18n.gd")
 const COST: = 1
 const DAILY: = 500
 const VOICE_RESCUE: = 200
 const VOICE_BALANCE_LIMIT: = 50
-const COLLECTION_NAMES: = ["初见黄铜", "海盐薄荷", "落日珊瑚", "午夜星光", "琥珀回声", "银河漫游"]
 const SKINS: = {
-	"classic": {"name": "经典街机", "price": 0, "body": "17324d", "bed": "243742", "trim": "bca36b"},
-	"mint": {"name": "海盐薄荷", "price": 1500, "body": "39776e", "bed": "285c5b", "trim": "a9e3ce"},
-	"sakura": {"name": "落日樱粉", "price": 3500, "body": "915b6c", "bed": "634553", "trim": "edbfa4"},
-	"clown_deluxe": {"name": "经典小丑·典藏", "price": 12000, "body": "173f96", "bed": "89969e", "trim": "d5bd73"},
-	"galaxy": {"name": "午夜银河", "price": 6000, "body": "4b4981", "bed": "302f55", "trim": "b7a9e6"},
-	"retro": {"name": "复古街机", "price": 0, "login_days": 3, "body": "653d34", "bed": "34434b", "trim": "c5a36c"},
-	"future": {"name": "未来霓虹", "price": 0, "login_days": 10, "body": "18374b", "bed": "253949", "trim": "69e0ec"},
-	"royal": {"name": "皇家典藏", "price": 100000, "body": "342449", "bed": "34333f", "trim": "e5bf69"},
-	"aurora": {"name": "极光幻彩", "price": 200000, "body": "245e64", "bed": "253d4c", "trim": "a7d9cb"}
+	"classic": {"price": 0, "body": "17324d", "bed": "243742", "trim": "bca36b"},
+	"mint": {"price": 1500, "body": "39776e", "bed": "285c5b", "trim": "a9e3ce"},
+	"sakura": {"price": 3500, "body": "915b6c", "bed": "634553", "trim": "edbfa4"},
+	"clown_deluxe": {"price": 12000, "body": "173f96", "bed": "89969e", "trim": "d5bd73"},
+	"galaxy": {"price": 6000, "body": "4b4981", "bed": "302f55", "trim": "b7a9e6"},
+	"retro": {"price": 0, "login_days": 3, "body": "653d34", "bed": "34434b", "trim": "c5a36c"},
+	"future": {"price": 0, "login_days": 10, "body": "18374b", "bed": "253949", "trim": "69e0ec"},
+	"royal": {"price": 100000, "body": "342449", "bed": "34333f", "trim": "e5bf69"},
+	"aurora": {"price": 200000, "body": "245e64", "bed": "253d4c", "trim": "a7d9cb"}
 }
 const TITLES: = [
-	["初来乍到", "inserted", 0], ["试试手气", "inserted", 1], ["街机常客", "inserted", 50], ["落币如雨", "inserted", 500], ["千投不倦", "inserted", 2000],
-	["第一桶金", "collected", 1], ["百币入袋", "collected", 100], ["收币能手", "collected", 1000], ["万币归仓", "collected", 10000], ["拾光收藏家", "collected", 50000],
-	["好运开张", "jackpots", 1], ["好事成双", "jackpots", 10], ["中奖专业户", "jackpots", 100],
-	["毛球捕手", "best_prize", 58], ["火腿搭档", "best_prize", 388], ["金币车车长", "best_prize", 2999], ["金库来客", "best_prize", 29999],
-	["高塔见习生", "towers", 1], ["推塔高手", "towers", 10], ["换装玩家", "skins", 2], ["机台收藏家", "skins", 5],
-	["私人铸币师", "custom", 1], ["再来一局", "restarts", 1], ["轮盘体验官", "roulette", 1]
+	["inserted", 0], ["inserted", 1], ["inserted", 50], ["inserted", 500], ["inserted", 2000],
+	["collected", 1], ["collected", 100], ["collected", 1000], ["collected", 10000], ["collected", 50000],
+	["jackpots", 1], ["jackpots", 10], ["jackpots", 100],
+	["best_prize", 58], ["best_prize", 388], ["best_prize", 2999], ["best_prize", 29999],
+	["towers", 1], ["towers", 10], ["skins", 2], ["skins", 5],
+	["custom", 1], ["restarts", 1], ["roulette", 1]
 ]
 const DAILY_TITLES: = [
-	["今日开张", "inserted", 1], ["随手十投", "inserted", 10], ["今日落币手", "inserted", 50], ["今日收币员", "collected", 10],
-	["今日小丰收", "collected", 100], ["今日好运", "jackpots", 1], ["今日推塔手", "towers", 1], ["今日铸币师", "custom", 1]
+	["inserted", 1], ["inserted", 10], ["inserted", 50], ["collected", 10],
+	["collected", 100], ["jackpots", 1], ["towers", 1], ["custom", 1]
 ]
 var daily_date: = ""
 var daily_records: Dictionary = {}
@@ -43,19 +43,19 @@ func daily_record(key: String, amount: = 1) -> void :
 	daily_records[key] = int(daily_records.get(key, 0)) + amount
 func title_name() -> String:
 	ensure_title_day()
-	return str(DAILY_TITLES[equipped_title - 100][0]) if equipped_title >= 100 else str(TITLES[equipped_title][0])
+	return I18n.title_name(equipped_title)
 func title_progress(index: int) -> int:
 	ensure_title_day()
-	if index >= 100 and index < 100 + DAILY_TITLES.size(): return int(daily_records.get(DAILY_TITLES[index - 100][1], 0))
+	if index >= 100 and index < 100 + DAILY_TITLES.size(): return int(daily_records.get(DAILY_TITLES[index - 100][0], 0))
 	if index < 0 or index >= TITLES.size(): return 0
-	match TITLES[index][1]:
+	match TITLES[index][0]:
 		"inserted": return inserted
 		"collected": return collected
 		"skins": return owned_skins.size()
-	return int(records.get(TITLES[index][1], 0))
+	return int(records.get(TITLES[index][0], 0))
 func has_title(index: int) -> bool:
-	if index >= 100 and index < 100 + DAILY_TITLES.size(): return title_progress(index) >= int(DAILY_TITLES[index - 100][2])
-	return index >= 0 and index < TITLES.size() and title_progress(index) >= int(TITLES[index][2])
+	if index >= 100 and index < 100 + DAILY_TITLES.size(): return title_progress(index) >= int(DAILY_TITLES[index - 100][1])
+	return index >= 0 and index < TITLES.size() and title_progress(index) >= int(TITLES[index][1])
 func equip_title(index: int) -> bool:
 	if not has_title(index): return false
 	equipped_title = index
@@ -118,10 +118,8 @@ func skin_requirement(id: String) -> String:
 		return ""
 	var required: = int(SKINS[id].get("login_days", 0))
 	if required > 0:
-		if owned_skins.has(id):
-			return "连续登录 %d 天 · 已永久解锁" % required
-		return "连续登录 %d 天 · 当前 %d/%d 天" % [required, mini(login_streak, required), required]
-	return "初始免费拥有" if int(SKINS[id].price) == 0 else "永久兑换 · %s 金币" % str(SKINS[id].price)
+		return I18n.skin_login_text(required, owned_skins.has(id), login_streak)
+	return I18n.skin_price_text(int(SKINS[id].price))
 
 func spend(practice: bool) -> bool:
 	if practice:
@@ -147,8 +145,8 @@ func unlocked_count() -> int:
 	return mini(6, inserted / 50)
 
 func claim_voice(transcript: String, day: = "") -> int:
-	var normalized: = transcript.strip_edges().replace(" ", "").replace("。", "").replace("！", "").replace("!", "").replace("，", "").replace(",", "")
-	if normalized not in ["国安是冠军", "国安永远争第一", "跟丫死磕"] or balance >= VOICE_BALANCE_LIMIT:
+	var normalized: = transcript.strip_edges().replace(" ", "").replace("。", "").replace("！", "").replace("!", "").replace("，", "").replace(",", "").to_lower()
+	if normalized not in I18n.match_list() or balance >= VOICE_BALANCE_LIMIT:
 		return 0
 	var date: String = Time.get_date_string_from_system() if day == "" else day
 	if not valid_date(date) or date <= voice_last_daily or date < last_daily:

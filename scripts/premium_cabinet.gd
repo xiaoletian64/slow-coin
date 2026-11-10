@@ -1,6 +1,7 @@
 extends Node3D
 
 const Reel = preload("res://scripts/slot_reel.gd")
+const I18n = preload("res://scripts/i18n.gd")
 var machine: Node3D
 var display: SubViewport
 var reels: Array = []
@@ -59,7 +60,7 @@ func build(owner_machine: Node3D) -> void :
 	plaque(inset, -0.7, 0.12, "103f9d", 0.35)
 	block(Vector3(0, 6.37, -0.6), Vector3(4.88, 0.9, 0.15), "ecbf65", 0.85)
 	block(Vector3(0, 6.37, -0.49), Vector3(4.69, 0.75, 0.1), "900e23", 0.28)
-	text3d("经 典 小 丑", Vector3(0, 6.37, -0.42), 78, "fff0ac", 0.0088)
+	text3d(I18n.clown_marquee(), Vector3(0, 6.37, -0.42), 78, "fff0ac", 0.0088)
 	for side in [-1, 1]:
 		star(Vector3(side * 2.82, 6.4, -0.47), 0.36)
 		star(Vector3(side * 1.86, 7.02, -0.56), 0.22)
@@ -105,7 +106,7 @@ func build(owner_machine: Node3D) -> void :
 	block(Vector3(0, -0.17, 3.91), Vector3(7.35, 0.04, 0.29), "efc76e", 0.85)
 	block(Vector3(0, -1.02, 3.89), Vector3(7.38, 0.1, 0.36), "d6b259", 0.85)
 	block(Vector3(0, -0.69, 4.12), Vector3(3.5, 0.39, 0.045), "0b2866", 0.4)
-	text3d("经 典 小 丑  ·  典 藏", Vector3(0, -0.69, 4.15), 28, "f5d58c", 0.008)
+	text3d(I18n.clown_plaque(), Vector3(0, -0.69, 4.15), 28, "f5d58c", 0.008)
 	for side in [-1, 1]: star(Vector3(side * 2.94, -0.68, 4.14), 0.23)
 func beam_between(start: Vector3, end: Vector3, section: Vector2, tint: String, metal: float) -> void :
 	var offset: = end - start
@@ -275,7 +276,7 @@ func build_screen() -> void :
 	bg.color = Color("111a32")
 	bg.size = Vector2(768, 256)
 	display.add_child(bg)
-	title = screen_label("小丑连线奖", Vector2(18, 12), Vector2(500, 38), 28)
+	title = screen_label(I18n.clown_screen_title(), Vector2(18, 12), Vector2(500, 38), 28)
 	for i in range(3):
 		var panel: = ColorRect.new()
 		panel.position = Vector2(14 + i * 130, 48)
@@ -287,7 +288,7 @@ func build_screen() -> void :
 		reel.clip_contents = true
 		panel.add_child(reel)
 		reels.append(reel)
-	status = screen_label("投币命中靶\n启动老虎机", Vector2(425, 62), Vector2(325, 154), 34)
+	status = screen_label(I18n.clown_screen_idle(), Vector2(425, 62), Vector2(325, 154), 34)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	screen_label("58   /   388   /   2,999   /   29,999", Vector2(20, 220), Vector2(740, 32), 25)
 	var mesh: = MeshInstance3D.new()
@@ -302,16 +303,16 @@ func build_screen() -> void :
 	add_child(mesh)
 func sync_bonus(bonus, practice: bool) -> void :
 	if not visible: return
-	title.text = "练习台 · 小丑连线奖" if practice else "小丑连线奖"
+	title.text = I18n.clown_practice_title() if practice else I18n.clown_screen_title()
 	for i in range(3):
 		reels[i].rows = bonus.column(i)
 		reels[i].lit = bonus.lit_rows(i)
 		reels[i].set_reel(str(bonus.reels[i]), bonus.spinning, bonus.elapsed, i)
-	if bonus.spinning: status.text = "连抽降档" if bonus.reduced_draw else "抽奖中"
-	elif bonus.presentation > 0: status.text = "中了 %s！" % bonus.reward
-	elif bonus.remaining > 0: status.text = "待落 %s 枚" % bonus.remaining
-	else: status.text = "投币命中靶"
-	status.text += "\n待抽 %s 次" % bonus.pending_spins
+	if bonus.spinning: status.text = I18n.clown_reduced() if bonus.reduced_draw else I18n.clown_spinning()
+	elif bonus.presentation > 0: status.text = I18n.clown_won(bonus.reward)
+	elif bonus.remaining > 0: status.text = I18n.clown_to_drop(bonus.remaining)
+	else: status.text = I18n.clown_hit_target()
+	status.text += I18n.clown_spins_left(bonus.pending_spins)
 
 func bold_font() -> FontVariation:
 	var font: = FontVariation.new()

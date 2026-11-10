@@ -7,12 +7,13 @@ const PACKAGE: = "com.slowcoin.pusher"
 const BASE_URL: = "http://124.222.88.195/slow-coin/"
 const MANIFEST_URL: = BASE_URL + "latest.json"
 const Trust = preload("res://scripts/update_trust.gd")
+const I18n = preload("res://scripts/i18n.gd")
 const PART_PATH: = "user://updates/update.apk.part"
 const APK_PATH: = "user://updates/update.apk"
 const MAX_APK_BYTES: = 300 * 1024 * 1024
 var request: HTTPRequest
 var state: = "idle"
-var message: = "当前版本 " + VERSION_NAME
+var message: = I18n.upd_current_version() + VERSION_NAME
 var release: = {}
 var progress: = 0.0
 var automatic: = false
@@ -28,7 +29,7 @@ func _ready() -> void :
 	request.request_completed.connect(_completed)
 	if Engine.has_singleton("SlowCoinUpdate"):
 		bridge = Engine.get_singleton("SlowCoinUpdate")
-		bridge.status.connect( func(text): message = text;changed.emit())
+		bridge.status.connect( func(text): message = I18n.t(text);changed.emit())
 
 func check(background: = false) -> void :
 	if OS.get_name() != "Android": return
@@ -36,13 +37,13 @@ func check(background: = false) -> void :
 	automatic = background
 	release = {}
 	state = "checking"
-	message = "正在检查更新…"
+	message = I18n.upd_checking()
 	request.download_file = ""
 	request.body_size_limit = 65536
 	request.timeout = 15
 	changed.emit()
 	if request.request(MANIFEST_URL, ["Cache-Control: no-cache"]) != OK:
-		_fail("暂时无法连接更新服务器，可稍后重试。")
+		_fail(I18n.upd_no_server())
 
 func parse_release(body: PackedByteArray, current_code: = VERSION_CODE, public_key: = Trust.PUBLIC_KEY) -> Dictionary:
 	if body.size() > 65536: return {}
@@ -77,7 +78,7 @@ func parse_release(body: PackedByteArray, current_code: = VERSION_CODE, public_k
 func download() -> void :
 	if state != "available" or release.is_empty() or not release.get("newer", false): return
 	if bridge == null:
-		message = "请在 Android 版内下载更新，其他设备可打开下载页。"
+		message = I18n.upd_need_android()
 		changed.emit()
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://updates"))
@@ -85,26 +86,26 @@ func download() -> void :
 	_remove_file(APK_PATH)
 	state = "downloading"
 	progress = 0
-	message = "正在下载更新…"
+	message = I18n.upd_downloading()
 	request.download_file = PART_PATH
 	request.body_size_limit = int(release.size)
 	request.timeout = 600
 	changed.emit()
-	if request.request(release.url, ["Accept-Encoding: identity"]) != OK: _fail("下载未能开始，请重试。")
+	if request.request(release.url, ["Accept-Encoding: identity"]) != OK: _fail(I18n.upd_dl_failed())
 
 func cancel() -> void :
 	if state not in ["checking", "downloading"]: return
 	request.cancel_request()
 	_remove_file(PART_PATH)
 	state = "available" if not release.is_empty() and release.get("newer", false) else "idle"
-	message = "已取消，可以继续游戏。"
+	message = I18n.upd_cancelled()
 	changed.emit()
 
 func install() -> void :
 	if state != "ready" or bridge == null: return
 	if not valid_apk(APK_PATH, release):
 		_remove_file(APK_PATH)
-		_fail("安装文件已变化，请重新下载。")
+		_fail(I18n.upd_file_changed())
 		return
 	bridge.install_update(ProjectSettings.globalize_path(APK_PATH))
 
@@ -119,27 +120,27 @@ func valid_apk(path: String, info: Dictionary) -> bool:
 func _completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void :
 	if state not in ["checking", "downloading"]: return
 	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
-		_fail("更新服务暂不可用，游戏可继续离线游玩。" if state == "checking" else "下载中断或文件不完整，请重试。")
+		_fail(I18n.upd_service_down() if state == "checking" else I18n.upd_dl_incomplete())
 		return
 	if state == "checking":
 		release = parse_release(body)
 		if release.is_empty():
-			_fail("更新信息未通过校验，请稍后重试。")
+			_fail(I18n.upd_verify_later())
 			return
 		state = "available" if release.newer else "current"
-		message = "发现新版本 " + release.version if release.newer else "已经是最新版本 " + VERSION_NAME
+		message = I18n.upd_found_new(release.version) if release.newer else I18n.upd_latest(VERSION_NAME)
 		changed.emit()
 		if release.newer: update_available.emit()
 	else:
 		if not valid_apk(PART_PATH, release):
-			_fail("安装包校验失败，请重新下载。")
+			_fail(I18n.upd_pkg_verify_failed())
 			return
 		if DirAccess.rename_absolute(ProjectSettings.globalize_path(PART_PATH), ProjectSettings.globalize_path(APK_PATH)) != OK:
-			_fail("无法保存安装包，请检查可用空间。")
+			_fail(I18n.upd_pkg_save_failed())
 			return
 		state = "ready"
 		progress = 1
-		message = "安装包已校验，点击安装后由 Android 系统确认。"
+		message = I18n.upd_pkg_ready()
 		changed.emit()
 
 func _process(delta: float) -> void :
@@ -148,7 +149,7 @@ func _process(delta: float) -> void :
 	if elapsed < 0.25: return
 	elapsed = 0
 	progress = clampf(float(request.get_downloaded_bytes()) / maxf(1, float(release.size)), 0, 1)
-	message = "正在下载更新 · %d%%" % int(progress * 100)
+	message = I18n.upd_progress(int(progress * 100))
 	changed.emit()
 
 func _fail(text: String) -> void :

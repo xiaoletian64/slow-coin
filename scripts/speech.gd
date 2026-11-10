@@ -1,4 +1,5 @@
 extends Node
+const I18n = preload("res://scripts/i18n.gd")
 signal recognized(text: String)
 signal status(message: String)
 signal failed(message: String)
@@ -16,7 +17,7 @@ func _ready() -> void :
 func listen() -> void :
 	if pending: return
 	if bridge == null:
-		failed.emit("当前设备没有可用的系统语音服务，请使用已安装语音服务的 Android 或 iPhone 真机。")
+		failed.emit(I18n.no_speech_error())
 		return
 	pending = true
 	bridge.call("listen")
@@ -30,4 +31,4 @@ func _on_recognized(text: String) -> void :
 func _on_failed(message: String) -> void :
 	if not pending: return
 	pending = false
-	failed.emit(message)
+	failed.emit(I18n.t(message))

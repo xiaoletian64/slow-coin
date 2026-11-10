@@ -1,6 +1,6 @@
 extends RefCounted
 
-
+const I18n = preload("res://scripts/i18n.gd")
 
 const SYMBOLS: = ["cherry", "bell", "star", "seven"]
 const LINES: = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [6, 4, 2]]
@@ -8,7 +8,6 @@ const SETTLEMENT_THRESHOLD: = 200
 const CHAIN_LIMIT: = 2
 const PRIZES: = [58, 388, 2999, 29999]
 const ROLL_COUNT: = 1000000
-const PATTERNS: = ["逐枚吐币", "连续吐币", "摆动吐币", "快速吐币"]
 var spinning: = false
 var elapsed: = 0.0
 var cooldown: = 0.0
@@ -200,7 +199,7 @@ func lit_rows(index: int) -> Array:
 	return rows
 
 func pattern_name() -> String:
-	return PATTERNS[tier] if tier >= 0 else "等待命中奖口"
+	return I18n.pattern_name(tier)
 
 func to_dict() -> Dictionary:
 	return {"chain_used": chain_used, "pending_reduced": pending_reduced.duplicate(), "reduced_draw": reduced_draw, "format": 4, "awarded": awarded, "settled": settled, "payouts": payouts.duplicate(true), "spinning": spinning, "elapsed": elapsed, "cooldown": cooldown, "reward": reward, "remaining": remaining, "dispense_clock": dispense_clock, "presentation": presentation, "reels": reels.duplicate(), "tier": tier, "credited": credited, "emitted": emitted, "pending_spins": pending_spins, "grid": grid.duplicate(), "winning_line": winning_line}

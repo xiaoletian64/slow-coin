@@ -1,13 +1,9 @@
 extends RefCounted
 
-
+const I18n = preload("res://scripts/i18n.gd")
 const TARGETS: = {"inserted": 100, "collected": 40, "chased": 1}
-const TITLES: = {"inserted": "投币练手 · 正式投币 100 枚", "collected": "前口丰收 · 实收 40 枚", "chased": "守住钱包 · 驱赶小偷 1 次"}
 const ORDER: = ["inserted", "collected", "chased"]
-const RANKS: = [
-	[0, "新晋挑战者"], [3, "街机学徒"], [12, "挑战能手"],
-	[30, "机台守护者"], [60, "街机达人"], [120, "传奇收藏家"],
-]
+const RANK_STEPS: = [0, 3, 12, 30, 60, 120]
 const MAX_TOTAL: = 1000000000
 var day: = ""
 var progress: = {"inserted": 0, "collected": 0, "chased": 0}
@@ -33,22 +29,22 @@ func record(kind: String, amount, date: String) -> Array:
 	progress[kind] = mini(target, before + int(amount))
 	if before < target and int(progress[kind]) == target:
 		completed_total = mini(MAX_TOTAL, completed_total + 1)
-		completed.append(TITLES[kind])
+		completed.append(kind)
 	return completed
 
 func rows() -> Array:
 	var result: Array = []
 	for kind in ORDER:
-		result.append({"kind": kind, "title": TITLES[kind], "target": TARGETS[kind],
+		result.append({"kind": kind, "title": I18n.challenge_title(kind), "target": TARGETS[kind],
 			"progress": progress[kind], "completed": int(progress[kind]) >= int(TARGETS[kind])})
 	return result
 
 func rank_name() -> String:
-	var result: String = RANKS[0][1]
-	for rank in RANKS:
-		if completed_total >= int(rank[0]):
-			result = rank[1]
-	return result
+	var index: = 0
+	for i in range(RANK_STEPS.size()):
+		if completed_total >= RANK_STEPS[i]:
+			index = i
+	return I18n.rank_title(index)
 
 func to_dict() -> Dictionary:
 	return {"version": 1, "day": day, "progress": progress.duplicate(), "completed_total": completed_total}

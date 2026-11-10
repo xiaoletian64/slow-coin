@@ -1,6 +1,7 @@
 extends Node
 signal applied(texture: Texture2D)
 const FILE_PATH: = "user://coin-design.png"
+const I18n = preload("res://scripts/i18n.gd")
 var hud
 var bridge: Object
 var picking: = false
@@ -23,33 +24,33 @@ func _ready() -> void :
 		var saved: = Image.load_from_file(FILE_PATH)
 		if saved != null and not saved.is_empty(): current = ImageTexture.create_from_image(saved)
 func show_editor() -> void :
-	var content = hud.sheet("我的定制金币", "选择图片 → 圆形裁切 → 简化币面\n仅保存在本机，不上传图片")
+	var content = hud.sheet(I18n.designer_title(), I18n.designer_subtitle())
 	picture = TextureRect.new()
 	picture.custom_minimum_size = Vector2(220, 180)
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	picture.texture = ImageTexture.create_from_image(preview) if preview != null else current
 	content.add_child(picture)
-	hud.button(content, "选择一张图片", pick_image).custom_minimum_size.y = 42
-	for item in [["放大", 1.0, 3.0, zoom], ["左右", -1.0, 1.0, pan.x], ["上下", -1.0, 1.0, pan.y]]:
+	hud.button(content, I18n.pick_picture_button(), pick_image).custom_minimum_size.y = 42
+	for item in [["zoom", 1.0, 3.0, zoom], ["panx", -1.0, 1.0, pan.x], ["pany", -1.0, 1.0, pan.y]]:
 		var row: = HBoxContainer.new()
 		content.add_child(row)
-		hud.label(row, item[0], 12)
+		hud.label(row, I18n.slider_label(item[0]), 12)
 		var slider: = HSlider.new()
 		slider.min_value = item[1];slider.max_value = item[2];slider.value = item[3];slider.step = 0.02
 		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slider.custom_minimum_size = Vector2(150, 24)
 		row.add_child(slider)
 		slider.value_changed.connect( func(value):
-			if item[0] == "放大": zoom = value
-			elif item[0] == "左右": pan.x = value
+			if item[0] == "zoom": zoom = value
+			elif item[0] == "panx": pan.x = value
 			else: pan.y = value
 			render_preview())
-	confirm = hud.button(content, "应用到所有金币", commit, true)
+	confirm = hud.button(content, I18n.apply_coins_button(), commit, true)
 	confirm.custom_minimum_size.y = 42
 	confirm.disabled = preview == null
-	hud.button(content, "恢复默认币面", reset_design).custom_minimum_size.y = 38
-	hud.button(content, "返回皮肤商店", func(): hud.skin_preview_closed.emit()).custom_minimum_size.y = 38
+	hud.button(content, I18n.reset_face_button(), reset_design).custom_minimum_size.y = 38
+	hud.button(content, I18n.designer_back_button(), func(): hud.skin_preview_closed.emit()).custom_minimum_size.y = 38
 func pick_image() -> void :
 	picking = true
 	if bridge != null and bridge.has_method("pick_image"):
@@ -59,7 +60,7 @@ func pick_image() -> void :
 		dialog.use_native_dialog = true
 		dialog.access = FileDialog.ACCESS_FILESYSTEM
 		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp;图片"])
+		dialog.filters = PackedStringArray([I18n.image_filter()])
 		add_child(dialog)
 		dialog.file_selected.connect(load_selected)
 		dialog.canceled.connect( func(): on_failed(""))
@@ -69,10 +70,10 @@ func load_selected(path: String) -> void :
 	if is_instance_valid(dialog): dialog.queue_free()
 	var file: = FileAccess.open(path, FileAccess.READ)
 	if file == null or file.get_length() > 32 * 1024 * 1024:
-		on_failed("图片太大或无法读取，请选择小于 32 MB 的图片")
+		on_failed(I18n.picture_too_big())
 		return
 	source = Image.load_from_file(path)
-	if source == null or source.is_empty(): on_failed("这张图片无法读取，请换一张");return
+	if source == null or source.is_empty(): on_failed(I18n.picture_unreadable());return
 	if maxi(source.get_width(), source.get_height()) > 1024:
 		var ratio: = 1024.0 / maxi(source.get_width(), source.get_height())
 		source.resize(maxi(1, int(source.get_width() * ratio)), maxi(1, int(source.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
@@ -109,13 +110,13 @@ func commit() -> void :
 	if preview == null: return
 	var temporary: = FILE_PATH + ".tmp.png"
 	if preview.save_png(temporary) != OK or DirAccess.rename_absolute(temporary, FILE_PATH) != OK:
-		hud.toast("保存失败，原币面保持不变");return
+		hud.toast(I18n.face_save_failed());return
 	current = ImageTexture.create_from_image(preview)
 	applied.emit(current)
-	hud.toast("定制币面已应用 · 新旧金币同步更新")
+	hud.toast(I18n.face_applied())
 func reset_design() -> void :
 	if FileAccess.file_exists(FILE_PATH) and DirAccess.remove_absolute(FILE_PATH) != OK:
-		hud.toast("无法清除定制币面，请重试");return
+		hud.toast(I18n.face_clear_failed());return
 	current = null;source = null;preview = null
 	applied.emit(null)
 	show_editor()

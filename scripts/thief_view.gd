@@ -1,4 +1,5 @@
 extends Control
+const I18n = preload("res://scripts/i18n.gd")
 signal repel_requested
 var repel_button: Button
 var title: Label
@@ -20,7 +21,7 @@ func _ready() -> void :
 	panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
 	title = Label.new()
-	title.text = "夜行小偷靠近"
+	title.text = I18n.thief_panel_title()
 	title.position = Vector2(76, 10)
 	title.add_theme_font_size_override("font_size", 18)
 	add_child(title)
@@ -44,8 +45,8 @@ func sync_state(event, available: bool) -> void :
 	visible = available and event.active()
 	if not visible: return
 	elapsed = event.WARNING_SECONDS - event.remaining
-	detail.text = "%.1f 秒后偷走最多 %d 枚" % [event.remaining, event.pending_loss]
-	repel_button.text = "点击驱赶   %d / 3" % event.taps
+	detail.text = I18n.thief_detail(event.remaining, event.pending_loss)
+	repel_button.text = I18n.thief_repel_button(event.taps)
 	repel_button.size = Vector2(size.x - 90, 40)
 	timer.size = Vector2(size.x - 28, 4)
 	timer.value = event.remaining

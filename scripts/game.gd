@@ -9,6 +9,7 @@ const Bonus = preload("res://scripts/bonus.gd")
 const Feedback = preload("res://scripts/feedback.gd")
 const Thief = preload("res://scripts/thief_event.gd")
 const Challenges = preload("res://scripts/daily_challenges.gd")
+const I18n = preload("res://scripts/i18n.gd")
 var thief = Thief.new()
 var challenges = Challenges.new()
 var thief_view
@@ -71,24 +72,24 @@ func _ready() -> void :
 	machine.coin_exited.connect(on_coin_exited)
 	machine.coin_dropped.connect(on_coin_dropped)
 	machine.spin_hit.connect(on_spin_hit)
-	machine.coins_cleared.connect( func(count): hud.toast("台面超过 1,000 枚 · 随机消除 %d 枚" % count))
-	machine.rainbow.started.connect( func(): hud.toast("幸运彩球！准备砸向推盘"))
+	machine.coins_cleared.connect( func(count): hud.toast(I18n.trim_toast(count)))
+	machine.rainbow.started.connect( func(): hud.toast(I18n.rainbow_soon_toast()))
 	machine.rainbow.impacted.connect( func():
-		hud.toast("彩球砸台！前口掉落才到账")
+		hud.toast(I18n.rainbow_hit_toast())
 		persist.call_deferred())
 	machine.tower.prize_ready = func(): return bonus.ready_coin_count() >= 50
 	machine.tower.prize_appeared.connect( func(count):
 		for i in range(count): bonus.consume_coin())
 	machine.tower.appeared.connect( func(count):
 		if not practice: wallet.record("towers")
-		hud.toast("旋风带来 %d 枚金币塔 · 推到前口才到账" % count)
+		hud.toast(I18n.tower_toast(count))
 		persist())
 	speech = Speech.new()
 	add_child(speech)
 	speech.recognized.connect(on_voice_recognized)
 	speech.failed.connect(on_voice_failed)
 	speech.status.connect( func(message):
-		if voice_waiting: hud.show_voice(message, true))
+		if voice_waiting: hud.show_voice(I18n.t(message), true))
 	feedback = Feedback.new()
 	add_child(feedback)
 	machine.metal_hit.connect(feedback.play_collision)
@@ -102,7 +103,7 @@ func _ready() -> void :
 	hud.update_requested.connect(open_update)
 	updater.changed.connect( func():
 		if update_panel_open and paused: hud.show_update(updater))
-	updater.update_available.connect( func(): hud.toast("发现新版本 · 在暂停菜单查看更新"))
+	updater.update_available.connect( func(): hud.toast(I18n.update_toast()))
 	thief_view = preload("res://scripts/thief_view.gd").new()
 	hud.add_child(thief_view)
 	thief_view.repel_requested.connect(repel_thief)
@@ -207,7 +208,7 @@ func _ready() -> void :
 	refresh()
 	if not test_mode and OS.get_name() == "Android": updater.check.call_deferred(true)
 	if store.recovered:
-		hud.toast("已从备份恢复进度")
+		hud.toast(I18n.restore_toast())
 
 func layout() -> void :
 	if hud == null:
@@ -233,9 +234,9 @@ func grant_daily() -> void :
 	if wallet.claim_daily(today) > 0:
 		var unlocked_names: PackedStringArray = []
 		for id in wallet.owned_skins:
-			if not previously_owned.has(id): unlocked_names.append(Wallet.SKINS[id].name)
-		var notice: = "今日补给 +%s · 连续登录 %d 天" % [Hud.format_number(Wallet.DAILY), wallet.login_streak]
-		if not unlocked_names.is_empty(): notice += "\n永久解锁：" + "、".join(unlocked_names)
+			if not previously_owned.has(id): unlocked_names.append(I18n.skin_name(id))
+		var notice: = I18n.daily_bonus_toast(Hud.format_number(Wallet.DAILY), wallet.login_streak)
+		if not unlocked_names.is_empty(): notice += I18n.unlock_prefix() + I18n.list_join(unlocked_names)
 		hud.toast(notice)
 		persist()
 		refresh()
@@ -244,11 +245,11 @@ func request_coin() -> void :
 	if paused or save_failed:
 		return
 	if not machine.accepts_coin():
-		hud.toast("投币队列已达上限，请稍后再投")
+		hud.toast(I18n.queue_full_toast())
 		return
 	var unlocked: int = wallet.unlocked_count()
 	if not wallet.spend(practice):
-		hud.toast("金币用完啦，免费练习台随时开放")
+		hud.toast(I18n.broke_practice_toast())
 		return
 	machine.enqueue(machine.lane)
 	machine.tower.input_accepted()
@@ -261,9 +262,9 @@ func request_coin() -> void :
 		if bonus.presentation <= 0 and thief.input_accepted(wallet.balance):
 			stop_coin_hold()
 			feedback.play("alert")
-			hud.toast("夜行小偷！5 秒内点击驱赶 3 次")
+			hud.toast(I18n.thief_alert_toast())
 	if wallet.unlocked_count() > unlocked:
-		hud.toast("收藏解锁 · " + Wallet.COLLECTION_NAMES[unlocked])
+		hud.toast(I18n.collection_unlocked_prefix() + I18n.collection_name(unlocked))
 	persist()
 	refresh()
 
@@ -305,7 +306,7 @@ func on_spin_hit() -> void :
 	var accepted: bool = bonus.trigger()
 	feedback.play("target")
 	if accepted: feedback.play("spin")
-	hud.toast(("命中移动靶！" + ("抽奖已排队" if bonus.pending_spins > 0 else "三滚轮启动")) if accepted else "本轮连抽已达 2 次 · 继续推币收奖")
+	hud.toast((I18n.target_hit_toast() + (I18n.spin_queued_text() if bonus.pending_spins > 0 else I18n.reels_start_text())) if accepted else I18n.chain_capped_toast())
 	persist()
 	refresh()
 
@@ -349,7 +350,7 @@ func switch_mode() -> void :
 	payout_amount = 0
 	persist()
 	refresh()
-	hud.toast("自由练习 · 无限投币，不计收益" if practice else "已回到正式台，接着慢慢推")
+	hud.toast(I18n.practice_enter_toast() if practice else I18n.practice_exit_toast())
 
 func open_pause() -> void :
 	update_panel_open = false
@@ -399,7 +400,7 @@ func persist() -> void :
 		return
 	if not store.write(make_save()):
 		save_failed = true
-		hud.toast(store.error_message + "，投币暂时停用")
+		hud.toast(store.error_message + I18n.save_paused_suffix())
 	else:
 		save_failed = false
 
@@ -414,10 +415,10 @@ func _physics_process(delta: float) -> void :
 				wallet.records["best_prize"] = maxi(int(wallet.records.get("best_prize", 0)), prize)
 			jackpot_fx.celebrate(prize)
 			feedback.play("reward_small" if prize == 58 else ("reward_medium" if prize == 388 else ("reward_big" if prize in [2888, 2999] else "reward_grand")))
-			hud.toast("三同中奖！%s 枚，演出结束后开始吐币" % Hud.format_number(prize))
+			hud.toast(I18n.triple_win_toast(Hud.format_number(prize)))
 		else:
 			feedback.play("miss")
-			hud.toast("这次未连成三同，继续观察落点")
+			hud.toast(I18n.triple_miss_toast())
 		persist()
 		refresh()
 	if maybe_prompt_settlement():
@@ -445,7 +446,7 @@ func _process(delta: float) -> void :
 		if was_active and not thief.active():
 			wallet.balance -= lost
 			feedback.play("theft")
-			hud.toast("小偷逃走了 · 钱包 -%d 金币" % lost)
+			hud.toast(I18n.thief_stole_toast(lost))
 			persist()
 			refresh()
 	thief_view.sync_state(thief, not practice and not paused and bonus.presentation <= 0)
@@ -510,14 +511,14 @@ func change_mechanism(id: String) -> void :
 
 func open_voice() -> void :
 	set_paused(true)
-	hud.show_voice("可直接输入，也可用输入法语音。确认文字后领取。")
+	hud.show_voice(I18n.voice_intro_message())
 
 func start_voice() -> void :
 	if practice:
-		hud.show_voice("请先返回正式机台，再领取语音补给。")
+		hud.show_voice(I18n.voice_practice_block())
 		return
 	voice_waiting = true
-	hud.show_voice("正在请求麦克风，请留意系统权限提示…", true)
+	hud.show_voice(I18n.mic_request_message(), true)
 	speech.listen()
 
 func on_voice_recognized(text: String) -> void :
@@ -526,11 +527,11 @@ func on_voice_recognized(text: String) -> void :
 	var amount: int = wallet.claim_voice(text)
 	persist()
 	refresh()
-	hud.show_voice("识别：%s\n+%s 金币已到账！" % [text, Hud.format_number(amount)] if amount > 0 else "识别：%s\n口令需匹配，余额低于 %d，且每日只能领取一次。" % [text, Wallet.VOICE_BALANCE_LIMIT])
+	hud.show_voice(I18n.voice_success_message(text, Hud.format_number(amount)) if amount > 0 else I18n.voice_fail_message(text, Wallet.VOICE_BALANCE_LIMIT))
 
 func on_voice_failed(message: String) -> void :
 	voice_waiting = false
-	hud.show_voice(message)
+	hud.show_voice(I18n.t(message))
 
 func toggle_test_target() -> void :
 	var enabled: bool = not machine.test_target
@@ -538,22 +539,22 @@ func toggle_test_target() -> void :
 	if enabled and not practice: switch_mode()
 	machine.test_target = enabled
 	hud.test_enabled = enabled
-	hud.toast("测试开启：按投币必进中间洞，奖币也走此路径" if enabled else "测试关闭：恢复真实碰撞")
+	hud.toast(I18n.test_target_on_toast() if enabled else I18n.test_target_off_toast())
 
 
 func clear_machine() -> void :
 	if paused: return
 	if machine.shakeable_count() == 0:
-		hud.toast("上方钉板没有金币需要震落 · 下方推盘照常运行")
+		hud.toast(I18n.shake_nothing_toast())
 		return
 	machine.shake_clear()
 	if OS.has_feature("mobile") and feedback.haptics: Input.vibrate_handheld(100, 0.5)
-	hud.toast("正在震落上方卡币 · 下方推盘照常运行")
+	hud.toast(I18n.shake_running_toast())
 	persist()
 
 func submit_phrase(text: String) -> void :
 	if practice:
-		hud.show_voice("请先返回正式台，再领取口令补给。")
+		hud.show_voice(I18n.phrase_practice_block())
 		return
 	if voice_waiting: speech.stop()
 	voice_waiting = true
@@ -570,7 +571,7 @@ func preview_skin(id: String) -> void :
 	set_paused(true)
 	preview_skin_id = id
 	apply_visual_skin(id)
-	hud.show_skin_preview(wallet.SKINS[id].name)
+	hud.show_skin_preview(I18n.skin_name(id))
 func close_skin_preview() -> void :
 	preview_skin_id = ""
 	apply_visual_skin(wallet.equipped_skin)
@@ -581,7 +582,7 @@ func test_coin_tower() -> void :
 	if not practice: switch_mode()
 	machine.tower.inputs = machine.tower.NATURAL_INPUTS
 	machine.tower.wait_seconds = 0
-	hud.toast("练习测试 · 有空位时旋风带来金币塔")
+	hud.toast(I18n.tower_test_toast())
 	persist()
 
 func maybe_prompt_settlement() -> bool:
@@ -615,7 +616,7 @@ func settle_pending_prizes() -> void :
 		bonus.restore(old_bonus)
 		machine.tower.restore(old_tower)
 		wallet.restore(old_wallet)
-		hud.toast("保存失败，本次未结算，请重试")
+		hud.toast(I18n.settle_save_fail_toast())
 		return
 	refresh()
 	hud.show_settlement_result(bonus.last_settlement_pool, percent, received)
@@ -636,7 +637,7 @@ func restart_round() -> void :
 	persist()
 	set_paused(false)
 	refresh()
-	hud.toast("新一局已开始 · 金币与未发奖励保留")
+	hud.toast(I18n.round_started_toast())
 
 func repel_thief() -> void :
 	if paused or practice or save_failed or bonus.presentation > 0 or not thief.active(): return
@@ -646,7 +647,7 @@ func repel_thief() -> void :
 		feedback.play("repel")
 		var previous_stamps: int = challenges.completed_total
 		record_challenge("chased")
-		hud.toast("成功驱赶 · 钱包保住了！" + ("\n今日挑战完成 · 收藏印章 +1" if challenges.completed_total > previous_stamps else ""))
+		hud.toast(I18n.repel_success_toast() + (I18n.repel_stamp_suffix() if challenges.completed_total > previous_stamps else ""))
 	else:
 		feedback.play("ui")
 	persist()
@@ -655,10 +656,10 @@ func repel_thief() -> void :
 func record_challenge(kind: String, amount: int = 1) -> void :
 	var completed: Array = challenges.record(kind, amount, Time.get_date_string_from_system())
 	if not completed.is_empty():
-		hud.toast("挑战完成 · %s · 收藏印章 +%d" % ["、".join(completed), completed.size()])
+		hud.toast(I18n.challenge_done_toast(I18n.challenge_list(completed), completed.size()))
 
 func open_update() -> void :
 	set_paused(true)
 	update_panel_open = true
 	hud.show_update(updater)
-	if updater.state not in ["checking", "downloading", "available", "ready"]: updater.check()
+	if not OS.has_feature("ios") and updater.state not in ["checking", "downloading", "available", "ready"]: updater.check()

@@ -16,9 +16,10 @@ func run() -> void:
 		var n = pending.pop_back()
 		if n is Label: text += n.text + "\n"
 		for child in n.get_children(): pending.append(child)
-	for phrase in ["国安是冠军", "国安永远争第一", "跟丫死磕"]:
+	for phrase in ["guoan", "各个国家的战斗到底"]:
 		check(phrase in text, "visible phrase " + phrase)
-	check(not "山东驴" in text, "removed phrase absent from help")
+	for phrase in ["国安是冠军", "国安永远争第一", "跟丫死磕", "山东驴"]:
+		check(not phrase in text, "retired phrase absent " + phrase)
 	game.feedback.stop_all()
 	game.queue_free()
 	await process_frame

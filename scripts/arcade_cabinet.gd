@@ -1,5 +1,6 @@
 extends Node3D
 
+const I18n = preload("res://scripts/i18n.gd")
 
 var body_material: StandardMaterial3D
 var trim_material: StandardMaterial3D
@@ -137,7 +138,7 @@ func _build_marquee() -> void :
 	_round_box("MarqueeRim", Vector3(0, 5.92, -1.385), Vector3(6.78, 0.66, 0.075), 0.19, trim_material)
 	_round_box("MarqueeShadowGap", Vector3(0, 5.92, -1.333), Vector3(6.59, 0.51, 0.045), 0.14, ink)
 	_round_box("OpalLightbox", Vector3(0, 5.92, -1.299), Vector3(6.43, 0.4, 0.018), 0.115, warm)
-	_title_label = _text("拾 光 币 社", Vector3(-0.17, 5.94, -1.274), 58, 0.0062, Color("172a35"))
+	_title_label = _text(I18n.marquee_title("classic"), Vector3(-0.17, 5.94, -1.274), 58, 0.0062, Color("172a35"))
 	_subtitle_label = _text("A T E L I E R", Vector3(2.12, 5.94, -1.274), 28, 0.006, Color("243b49"))
 
 	_disc("BrandSeal", Vector3(-2.47, 5.94, -1.252), 0.205, 0.052, trim_material)
@@ -361,7 +362,7 @@ func set_style(id: String) -> void :
 	panel.albedo_color = Color(palette[2])
 	warm.albedo_color = Color(palette[3])
 	warm.emission = Color(palette[3])
-	_title_label.text = {"classic": "拾 光 币 社", "retro": "落 日 街 机", "future": "量 子 推 币", "royal": "鎏 金 典 藏", "aurora": "极 光 冰 宫"}[current_style]
+	_title_label.text = I18n.marquee_title(current_style)
 	_subtitle_label.text = {"classic": "A T E L I E R", "retro": "R E T R O", "future": "Q U A N T U M", "royal": "R O Y A L", "aurora": "A U R O R A"}[current_style]
 	var first: = get_child_count()
 	match current_style:

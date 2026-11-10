@@ -47,10 +47,10 @@ func run()->void:
 	game.switch_mode()
 	check(not game.machine.test_target,"formal board never inherits guaranteed hits")
 	game.wallet.balance=499
-	game.submit_phrase("国安是冠军")
+	game.submit_phrase("guoan")
 	check(game.wallet.balance==5499,"typed or IME phrase credits the same wallet rule")
 	game.submit_phrase("山东驴")
-	game.submit_phrase("跟丫死磕")
+	game.submit_phrase("各个国家战斗到底")
 	check(game.wallet.balance==9491,"testing phrases available at normal balance")
 	var shakes:Array=[0]
 	var sensor=load("res://scripts/shake_detector.gd").new()
